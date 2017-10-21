@@ -37,6 +37,8 @@ import com.qualcomm.robotcore.hardware.DcMotorSimple;
 import com.qualcomm.robotcore.util.ElapsedTime;
 import com.qualcomm.robotcore.util.Range;
 
+import java.util.ArrayList;
+
 /**
  * This file contains an example of an iterative (Non-Linear) "OpMode".
  * An OpMode is a 'program' that runs in either the autonomous or the teleop period of an FTC match.
@@ -90,6 +92,10 @@ public class TeleOpMode_Ori extends OpMode
      */
     @Override
     public void init_loop() {
+        leftfrontDrive.setPower(0);
+        rightfrontDrive.setPower(0);
+        leftbackDrive.setPower(0);
+        rightbackDrive.setPower(0);
     }
 
     /*
@@ -110,6 +116,8 @@ public class TeleOpMode_Ori extends OpMode
         double powerX;
         double powerLeft;
         double powerRight;
+        double divisor;
+        double[] thing = new double[] {2, 3};
 
         powerY  = -gamepad1.left_stick_y;
         powerX = -gamepad1.right_stick_x;
@@ -117,11 +125,13 @@ public class TeleOpMode_Ori extends OpMode
         powerLeft = powerX + powerY;
         powerRight = powerX - powerY;
 
+        thing = [powerLeft, powerRight]
+
         if (powerLeft > powerRight) {
-            powerRight = powerRight / powerLeft;
+            powerRight = powerLeft != 0 ? (powerRight / powerLeft): 0;
         }
         else {
-            powerLeft = powerLeft / powerRight;
+            powerLeft = powerRight != 0 ? (powerLeft / powerRight): 0;
         }
 
         // Send calculated power to wheels

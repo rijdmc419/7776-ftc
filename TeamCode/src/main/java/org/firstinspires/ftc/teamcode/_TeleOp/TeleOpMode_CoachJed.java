@@ -91,7 +91,7 @@ public class TeleOpMode_CoachJed extends OpMode
             motorFrontLeft = hardwareMap.dcMotor.get("frontLeft");
             motorBackRight = hardwareMap.dcMotor.get("backRight");
             motorBackLeft = hardwareMap.dcMotor.get("backLeft");
-            gyro_pointer = hardwareMap.gyroSensor.get("base_gyro")
+            //gyro_pointer = hardwareMap.gyroSensor.get("base_gyro");
             //motorFrontLeft.setDirection(DcMotor.Direction.REVERSE);
             //motorBackLeft.setDirection(DcMotor.Direction.REVERSE);
         }

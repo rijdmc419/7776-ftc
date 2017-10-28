@@ -38,6 +38,10 @@ import com.qualcomm.robotcore.util.ElapsedTime;
 import com.qualcomm.robotcore.util.Range;
 
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
+
+import static java.lang.Math.abs;
 
 /**
  * This file contains an example of an iterative (Non-Linear) "OpMode".
@@ -114,25 +118,20 @@ public class TeleOpMode_Ori extends OpMode
         // Setup a variable for each drive wheel to save power level for telemetry
         double powerY;
         double powerX;
-        double powerLeft;
-        double powerRight;
-        double divisor;
-        double[] thing = new double[] {2, 3};
+        double powerLeft = 0;
+        double powerRight = 0;
+        double powerMax = 1;
 
         powerY  = -gamepad1.left_stick_y;
-        powerX = -gamepad1.right_stick_x;
+        powerX = gamepad1.right_stick_x;
 
-        powerLeft = powerX + powerY;
-        powerRight = powerX - powerY;
+        powerMax = Collections.max(Arrays.asList(powerMax, powerLeft, powerRight));
 
-        thing = [powerLeft, powerRight]
+        boolean allZero = (abs(powerX) == 0) && (abs(powerY) == 0);
+        double powerTotal = (abs(powerX) + abs(powerY)) > powerMax ? (abs(powerX) + abs(powerY)) : powerMax;
 
-        if (powerLeft > powerRight) {
-            powerRight = powerLeft != 0 ? (powerRight / powerLeft): 0;
-        }
-        else {
-            powerLeft = powerRight != 0 ? (powerLeft / powerRight): 0;
-        }
+        powerLeft = allZero ? 0 : ((powerX + powerY) / (powerTotal * powerMax));
+        powerRight = allZero ? 0 : ((powerX - powerY) / (powerTotal * powerMax));
 
         // Send calculated power to wheels
         leftfrontDrive.setPower(powerLeft);

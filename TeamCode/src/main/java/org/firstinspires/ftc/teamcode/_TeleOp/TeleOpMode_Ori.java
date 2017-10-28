@@ -37,6 +37,12 @@ import com.qualcomm.robotcore.hardware.DcMotorSimple;
 import com.qualcomm.robotcore.util.ElapsedTime;
 import com.qualcomm.robotcore.util.Range;
 
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
+
+import static java.lang.Math.abs;
+
 /**
  * This file contains an example of an iterative (Non-Linear) "OpMode".
  * An OpMode is a 'program' that runs in either the autonomous or the teleop period of an FTC match.
@@ -90,6 +96,10 @@ public class TeleOpMode_Ori extends OpMode
      */
     @Override
     public void init_loop() {
+        leftfrontDrive.setPower(0);
+        rightfrontDrive.setPower(0);
+        leftbackDrive.setPower(0);
+        rightbackDrive.setPower(0);
     }
 
     /*
@@ -108,21 +118,20 @@ public class TeleOpMode_Ori extends OpMode
         // Setup a variable for each drive wheel to save power level for telemetry
         double powerY;
         double powerX;
-        double powerLeft;
-        double powerRight;
+        double powerLeft = 0;
+        double powerRight = 0;
+        double powerMax = 1;
 
         powerY  = -gamepad1.left_stick_y;
-        powerX = -gamepad1.right_stick_x;
+        powerX = gamepad1.right_stick_x;
 
-        powerLeft = powerX + powerY;
-        powerRight = powerX - powerY;
+        powerMax = Collections.max(Arrays.asList(powerMax, powerLeft, powerRight));
 
-        if (powerLeft > powerRight) {
-            powerRight = powerRight / powerLeft;
-        }
-        else {
-            powerLeft = powerLeft / powerRight;
-        }
+        boolean allZero = (abs(powerX) == 0) && (abs(powerY) == 0);
+        double powerTotal = (abs(powerX) + abs(powerY)) > powerMax ? (abs(powerX) + abs(powerY)) : powerMax;
+
+        powerLeft = allZero ? 0 : ((powerX + powerY) / (powerTotal * powerMax));
+        powerRight = allZero ? 0 : ((powerX - powerY) / (powerTotal * powerMax));
 
         // Send calculated power to wheels
         leftfrontDrive.setPower(powerLeft);

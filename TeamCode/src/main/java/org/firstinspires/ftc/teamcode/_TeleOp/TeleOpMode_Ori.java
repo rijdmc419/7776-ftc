@@ -34,6 +34,8 @@ import com.qualcomm.robotcore.eventloop.opmode.OpMode;
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
 import com.qualcomm.robotcore.hardware.DcMotor;
 import com.qualcomm.robotcore.hardware.DcMotorSimple;
+import com.qualcomm.robotcore.hardware.Servo;
+import com.qualcomm.robotcore.hardware.ServoController;
 import com.qualcomm.robotcore.util.ElapsedTime;
 import com.qualcomm.robotcore.util.Range;
 
@@ -66,6 +68,8 @@ public class TeleOpMode_Ori extends OpMode
     private DcMotor rightfrontDrive = null;
     private DcMotor leftbackDrive = null;
     private DcMotor rightbackDrive = null;
+    private Servo gripper = null;
+    boolean debug = false;
 
     /*
      * Code to run ONCE when the driver hits INIT
@@ -77,16 +81,25 @@ public class TeleOpMode_Ori extends OpMode
         // Initialize the hardware variables. Note that the strings used here as parameters
         // to 'get' must correspond to the names assigned during the robot configuration
         // step (using the FTC Robot Controller app on the phone).
-        leftfrontDrive  = hardwareMap.get(DcMotor.class, "frontLeft");
-        rightfrontDrive = hardwareMap.get(DcMotor.class, "frontRight");
-        leftbackDrive = hardwareMap.get(DcMotor.class, "backLeft");
-        rightbackDrive = hardwareMap.get(DcMotor.class, "backRight");
+        try {
+            leftfrontDrive = hardwareMap.get(DcMotor.class, "frontLeft");
+            rightfrontDrive = hardwareMap.get(DcMotor.class, "frontRight");
+            leftbackDrive = hardwareMap.get(DcMotor.class, "backLeft");
+            rightbackDrive = hardwareMap.get(DcMotor.class, "backRight");
+            gripper = hardwareMap.get(Servo.class, "gripper");
+        }
+        catch(IllegalArgumentException iax) {
+            debug = true;
+        }
+
+
         // Most robots need the motor on one side to be reversed to drive forward
         // Reverse the motor that runs backwards when connected directly to the battery
-        leftfrontDrive.setDirection(DcMotor.Direction.FORWARD);
-        rightfrontDrive.setDirection(DcMotor.Direction.REVERSE);
-        leftbackDrive.setDirection(DcMotor.Direction.FORWARD);
-        rightbackDrive.setDirection(DcMotor.Direction.REVERSE);
+        leftfrontDrive.setDirection(DcMotor.Direction.REVERSE);
+        rightfrontDrive.setDirection(DcMotor.Direction.FORWARD);
+        leftbackDrive.setDirection(DcMotor.Direction.REVERSE);
+        rightbackDrive.setDirection(DcMotor.Direction.FORWARD);
+        gripper.setPosition(0);
         // Tell the driver that initialization is complete.
         telemetry.addData("Status", "Initialized");
     }
@@ -121,9 +134,16 @@ public class TeleOpMode_Ori extends OpMode
         double powerLeft = 0;
         double powerRight = 0;
         double powerMax = 1;
+        boolean padRight = false;
+        boolean padLeft = false;
+        double gripperIncrement = .1;
+        double gripperPos = 0;
+        double gripperChange = 0;
 
-        powerY  = -gamepad1.left_stick_y;
+        powerY  = gamepad1.left_stick_y;
         powerX = gamepad1.right_stick_x;
+        padLeft = gamepad1.dpad_left;
+        padRight = gamepad1.dpad_right;
 
         powerMax = Collections.max(Arrays.asList(powerMax, powerLeft, powerRight));
 
@@ -131,17 +151,37 @@ public class TeleOpMode_Ori extends OpMode
         double powerTotal = (abs(powerX) + abs(powerY)) > powerMax ? (abs(powerX) + abs(powerY)) : powerMax;
 
         powerLeft = allZero ? 0 : ((powerX + powerY) / (powerTotal * powerMax));
+        powerLeft = -powerLeft;
         powerRight = allZero ? 0 : ((powerX - powerY) / (powerTotal * powerMax));
 
-        // Send calculated power to wheels
-        leftfrontDrive.setPower(powerLeft);
-        rightfrontDrive.setPower(powerRight);
-        leftbackDrive.setPower(powerLeft);
-        rightbackDrive.setPower(powerRight);
+        gripperChange = 0;
+
+        if (padLeft == true) {
+            gripperChange = -gripperIncrement;
+        }
+
+        else if (padRight == true) {
+            gripperChange = gripperIncrement;
+        }
+
+        gripperPos = gripperPos + gripperChange;
+
+        gripperPos = gripperPos > 1 ? 1 : gripperPos < -1 ? -1 : gripperPos;
+
+        if (!debug) {
+            // Send calculated power to wheels
+            leftfrontDrive.setPower(powerLeft);
+            rightfrontDrive.setPower(powerRight);
+            leftbackDrive.setPower(powerLeft);
+            rightbackDrive.setPower(powerRight);
+            gripper.setPosition(gripperPos);
+        }
 
         // Show the elapsed game time and wheel power.
         telemetry.addData("Status", "Run Time: " + runtime.toString());
         telemetry.addData("Motors", "left (%.2f), right (%.2f)", powerLeft, powerRight);
+        telemetry.addData("padRight", padRight);
+        telemetry.addData("padLeft", padLeft);
     }
 
     /*

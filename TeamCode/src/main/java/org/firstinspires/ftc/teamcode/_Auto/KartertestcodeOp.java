@@ -1,4 +1,4 @@
-package org.firstinspires.ftc.teamcode._Test._Drive;
+package org.firstinspires.ftc.teamcode._Auto;
 
 import com.qualcomm.robotcore.eventloop.opmode.Autonomous;
 import com.qualcomm.robotcore.eventloop.opmode.OpMode;
@@ -16,13 +16,13 @@ import org.firstinspires.ftc.teamcode._Libs.AutoLib;
 // simple example sequence that tests time based "squirrely wheel" drive steps to drive along a prescribed path
 @Autonomous(name="Test: Squirrely Drive Test 1", group ="Test")
 //@Disabled
-public class SquirrelyDriveTestOp extends OpMode {
+public class KartertestcodeOp extends OpMode {
 
     AutoLib.Sequence mSequence;             // the root of the sequence tree
     boolean bDone;                          // true when the programmed sequence is done
     DcMotor mMotors[];                      // motors, some of which can be null: assumed order is fr, br, fl, bl
-
-    @Override
+    boolean bDebug;
+    //@Override;
     public void init() {
         AutoLib.HardwareFactory mf = null;
         final boolean debug = false;
@@ -34,12 +34,22 @@ public class SquirrelyDriveTestOp extends OpMode {
         // get the motors: depending on the factory we created above, these may be
         // either dummy motors that just log data or real ones that drive the hardware
         // assumed order is fr, br, fl, bl
-        mMotors = new DcMotor[4];
+        /*mMotors = new DcMotor[4];
         mMotors[0] = mf.getDcMotor("frontRight");
         mMotors[1] = mf.getDcMotor("backRight");
         (mMotors[2] = mf.getDcMotor("frontLeft")).setDirection(DcMotor.Direction.REVERSE);
-        (mMotors[3] = mf.getDcMotor("backLeft")).setDirection(DcMotor.Direction.REVERSE);
+        (mMotors[3] = mf.getDcMotor("backLeft")).setDirection(DcMotor.Direction.REVERSE);*/
 
+
+        try {
+            mMotors[0] = mf.getDcMotor("frontRight");
+            mMotors[1] = mf.getDcMotor("backRight");
+            (mMotors[2] = mf.getDcMotor("frontLeft")).setDirection(DcMotor.Direction.REVERSE);
+            (mMotors[3] = mf.getDcMotor("backLeft")).setDirection(DcMotor.Direction.REVERSE);
+        }
+        catch (IllegalArgumentException iax) {
+            bDebug = true;
+        }
         // create an autonomous sequence with the steps to drive
         // several legs of a polygonal course ---
         float power = 0.1f;
@@ -52,6 +62,7 @@ public class SquirrelyDriveTestOp extends OpMode {
 
         // drive a square
         mSequence.add(new AutoLib.MoveSquirrelyByTimeStep(mMotors, -90, power, leg/2, false));
+        /*
         mSequence.add(new AutoLib.MoveSquirrelyByTimeStep(mMotors, 0, power, leg, false));
         mSequence.add(new AutoLib.MoveSquirrelyByTimeStep(mMotors, 90, power, leg, false));
         mSequence.add(new AutoLib.MoveSquirrelyByTimeStep(mMotors, 180, power, leg, false));
@@ -70,7 +81,7 @@ public class SquirrelyDriveTestOp extends OpMode {
             boolean stop = (i == n-1);
             mSequence.add(new AutoLib.MoveSquirrelyByTimeStep(mMotors, heading, power, leg/n, stop));
         }
-
+*/
         // start out not-done
         bDone = false;
     }

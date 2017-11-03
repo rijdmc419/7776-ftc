@@ -36,6 +36,8 @@ import com.qualcomm.robotcore.hardware.DcMotor;
 import com.qualcomm.robotcore.hardware.Servo;
 import com.qualcomm.robotcore.util.ElapsedTime;
 
+import org.firstinspires.ftc.teamcode._Libs.SensorLib;
+
 import java.util.Arrays;
 import java.util.Collections;
 
@@ -75,6 +77,8 @@ public class TeleOpMode_CoachJed extends OpMode
     private DcMotor motorBackLeft = null;
     private DcMotor motorBackRight = null;
     private ModernRoboticsI2cGyro gyro_pointer;
+    ModernRoboticsI2cGyro mGyro;            // gyro to use for heading information
+    SensorLib.CorrectedMRGyro mCorrGyro;
 
     /*
      * Code to run ONCE when the driver hits INIT
@@ -91,7 +95,7 @@ public class TeleOpMode_CoachJed extends OpMode
             motorFrontLeft = hardwareMap.dcMotor.get("frontLeft");
             motorBackRight = hardwareMap.dcMotor.get("backRight");
             motorBackLeft = hardwareMap.dcMotor.get("backLeft");
-            gyro_pointer = hardwareMap.gyroSensor.get("base_gyro")
+            gyro_pointer = (ModernRoboticsI2cGyro) hardwareMap.gyroSensor.get("base_gyro");
             //motorFrontLeft.setDirection(DcMotor.Direction.REVERSE);
             //motorBackLeft.setDirection(DcMotor.Direction.REVERSE);
         }

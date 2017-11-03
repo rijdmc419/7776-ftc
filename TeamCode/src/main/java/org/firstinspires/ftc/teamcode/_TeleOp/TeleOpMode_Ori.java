@@ -59,7 +59,7 @@ import static java.lang.Math.abs;
  * Remove or comment out the @Disabled line to add this opmode to the Driver Station OpMode list
  */
 
-@TeleOp(name="TeleOpMode_OriTank", group="Iterative Opmode")
+@TeleOp(name="TeleOpMode_Ori", group="Iterative Opmode")
 public class TeleOpMode_Ori extends OpMode
 {
     // Declare OpMode members.
@@ -69,7 +69,9 @@ public class TeleOpMode_Ori extends OpMode
     private DcMotor leftbackDrive = null;
     private DcMotor rightbackDrive = null;
     private Servo gripper = null;
-    boolean debug = false;
+    private boolean debug;
+    private double gripperPos = 0;
+    private double gripperChange = 0;
 
     /*
      * Code to run ONCE when the driver hits INIT
@@ -87,6 +89,12 @@ public class TeleOpMode_Ori extends OpMode
             leftbackDrive = hardwareMap.get(DcMotor.class, "backLeft");
             rightbackDrive = hardwareMap.get(DcMotor.class, "backRight");
             gripper = hardwareMap.get(Servo.class, "gripper");
+
+            leftfrontDrive.setDirection(DcMotor.Direction.REVERSE);
+            rightfrontDrive.setDirection(DcMotor.Direction.FORWARD);
+            leftbackDrive.setDirection(DcMotor.Direction.REVERSE);
+            rightbackDrive.setDirection(DcMotor.Direction.FORWARD);
+            //gripper.setPosition(0);
         }
         catch(IllegalArgumentException iax) {
             debug = true;
@@ -95,11 +103,6 @@ public class TeleOpMode_Ori extends OpMode
 
         // Most robots need the motor on one side to be reversed to drive forward
         // Reverse the motor that runs backwards when connected directly to the battery
-        leftfrontDrive.setDirection(DcMotor.Direction.REVERSE);
-        rightfrontDrive.setDirection(DcMotor.Direction.FORWARD);
-        leftbackDrive.setDirection(DcMotor.Direction.REVERSE);
-        rightbackDrive.setDirection(DcMotor.Direction.FORWARD);
-        gripper.setPosition(0);
         // Tell the driver that initialization is complete.
         telemetry.addData("Status", "Initialized");
     }
@@ -109,10 +112,13 @@ public class TeleOpMode_Ori extends OpMode
      */
     @Override
     public void init_loop() {
-        leftfrontDrive.setPower(0);
-        rightfrontDrive.setPower(0);
-        leftbackDrive.setPower(0);
-        rightbackDrive.setPower(0);
+        if (!debug) {
+            leftfrontDrive.setPower(0);
+            rightfrontDrive.setPower(0);
+            leftbackDrive.setPower(0);
+            rightbackDrive.setPower(0);
+        }
+        gripperChange = 0;
     }
 
     /*
@@ -136,12 +142,10 @@ public class TeleOpMode_Ori extends OpMode
         double powerMax = 1;
         boolean padRight = false;
         boolean padLeft = false;
-        double gripperIncrement = .1;
-        double gripperPos = 0;
-        double gripperChange = 0;
+        double gripperIncrement = .01;
 
         powerY  = gamepad1.left_stick_y;
-        powerX = gamepad1.right_stick_x;
+        powerX = -gamepad1.right_stick_x;
         padLeft = gamepad1.dpad_left;
         padRight = gamepad1.dpad_right;
 
@@ -154,19 +158,21 @@ public class TeleOpMode_Ori extends OpMode
         powerLeft = -powerLeft;
         powerRight = allZero ? 0 : ((powerX - powerY) / (powerTotal * powerMax));
 
-        gripperChange = 0;
-
-        if (padLeft == true) {
+        if (padLeft) {
             gripperChange = -gripperIncrement;
         }
 
-        else if (padRight == true) {
+        else if (padRight) {
             gripperChange = gripperIncrement;
+        }
+
+        else {
+            gripperChange = 0;
         }
 
         gripperPos = gripperPos + gripperChange;
 
-        gripperPos = gripperPos > 1 ? 1 : gripperPos < -1 ? -1 : gripperPos;
+        gripperPos = gripperPos > 1 ? 1 : gripperPos < 0 ? 0 : gripperPos;
 
         if (!debug) {
             // Send calculated power to wheels
@@ -182,6 +188,7 @@ public class TeleOpMode_Ori extends OpMode
         telemetry.addData("Motors", "left (%.2f), right (%.2f)", powerLeft, powerRight);
         telemetry.addData("padRight", padRight);
         telemetry.addData("padLeft", padLeft);
+        telemetry.addData("gripperPos", gripperPos);
     }
 
     /*

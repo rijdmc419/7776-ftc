@@ -86,10 +86,10 @@ public class TeleOpMode_TankJohn extends OpMode
 
             // Most robots need the motor on one side to be reversed to drive forward
             // Reverse the motor that runs backwards when connected directly to the battery
-            leftfrontDrive.setDirection(DcMotor.Direction.FORWARD);
-            rightfrontDrive.setDirection(DcMotor.Direction.REVERSE);
-            leftbackDrive.setDirection(DcMotor.Direction.FORWARD);
-            rightbackDrive.setDirection(DcMotor.Direction.REVERSE);
+            leftfrontDrive.setDirection(DcMotor.Direction.REVERSE);
+            rightfrontDrive.setDirection(DcMotor.Direction.FORWARD);
+            leftbackDrive.setDirection(DcMotor.Direction.REVERSE);
+            rightbackDrive.setDirection(DcMotor.Direction.FORWARD);
         }
         catch (IllegalArgumentException iax) {
             debug = true;
@@ -129,6 +129,7 @@ public class TeleOpMode_TankJohn extends OpMode
         double rightRearPower = 0;
         double gripper = 0;
         double joyStick;
+        String nothing = "";
 
 
         // Choose to drive using either Tank Mode, or POV Mode
@@ -190,11 +191,27 @@ public class TeleOpMode_TankJohn extends OpMode
         //telemetry.addData("Motors", "left (%.2f), right (%.2f)", leftFrontPower, rightFrontPower);
         //telemetry.addData("TriggerSet", triggerSet);
         telemetry.addData("x", x);
-        telemetry.addData("joyStick", joyStick);
+        if(x == 0){
+            telemetry.addData("Front left motor activated", nothing);
+        }
+        else if(x == 1){
+            telemetry.addData("Front right motor activated", nothing);
+        }
+        else if(x == 2){
+            telemetry.addData("Rear left motor activated", nothing);
+        }
+        else if(x == 3){
+            telemetry.addData("Rear left motor activated", nothing);
+        }
+        else if(x == 4) {
+            telemetry.addData("Gripper activated", nothing);
+        }
         telemetry.addData("leftFrontPower", leftFrontPower);
         telemetry.addData("rightFrontPower", rightFrontPower);
         telemetry.addData("leftRearPower", leftRearPower);
         telemetry.addData("rightRearPower", rightRearPower);
+        telemetry.addData("Gripper power", gripper);
+        telemetry.addData("joyStick", joyStick);
     }
 
     /*

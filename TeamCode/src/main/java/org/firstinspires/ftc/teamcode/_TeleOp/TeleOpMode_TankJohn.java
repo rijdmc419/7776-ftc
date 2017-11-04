@@ -32,6 +32,7 @@ package org.firstinspires.ftc.teamcode._TeleOp;
 import com.qualcomm.robotcore.eventloop.opmode.OpMode;
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
 import com.qualcomm.robotcore.hardware.DcMotor;
+import com.qualcomm.robotcore.hardware.Servo;
 import com.qualcomm.robotcore.util.ElapsedTime;
 
 /**
@@ -59,12 +60,18 @@ public class TeleOpMode_TankJohn extends OpMode
     private DcMotor rightfrontDrive = null;
     private DcMotor leftbackDrive = null;
     private DcMotor rightbackDrive = null;
+    private Servo servo = null;
+
+    int x;
+    int triggerSet;
 
     /*
      * Code to run ONCE when the driver hits INIT
      */
     @Override
     public void init() {
+        x = 0;
+        triggerSet = 0;
         telemetry.addData("Status", "Initialized");
 
         // Initialize the hardware variables. Note that the strings used here as parameters
@@ -75,6 +82,8 @@ public class TeleOpMode_TankJohn extends OpMode
             rightfrontDrive = hardwareMap.get(DcMotor.class, "frontRight");
             leftbackDrive = hardwareMap.get(DcMotor.class, "backLeft");
             rightbackDrive = hardwareMap.get(DcMotor.class, "backRight");
+            servo = hardwareMap.get(Servo.class, "gripper");
+
             // Most robots need the motor on one side to be reversed to drive forward
             // Reverse the motor that runs backwards when connected directly to the battery
             leftfrontDrive.setDirection(DcMotor.Direction.FORWARD);
@@ -94,6 +103,10 @@ public class TeleOpMode_TankJohn extends OpMode
      */
     @Override
     public void init_loop() {
+        leftfrontDrive.setPower(0);
+        rightfrontDrive.setPower(0);
+        leftbackDrive.setPower(0);
+        rightbackDrive.setPower(0);
     }
 
     /*
@@ -110,14 +123,12 @@ public class TeleOpMode_TankJohn extends OpMode
     @Override
     public void loop() {
         // Setup a variable for each drive wheel to save power level for telemetry
-        double leftFrontPower;
-        double leftRearPower;
-        double rightFrontPower;
-        double rightRearPower;
-        double gripper;
-
-        int triggerSet = 0;
-        int x = 0;
+        double leftFrontPower = 0;
+        double leftRearPower = 0;
+        double rightFrontPower = 0;
+        double rightRearPower = 0;
+        double gripper = 0;
+        double joyStick;
 
 
         // Choose to drive using either Tank Mode, or POV Mode
@@ -132,11 +143,11 @@ public class TeleOpMode_TankJohn extends OpMode
 
         // Tank Mode uses one stick to control each wheel.
         // - This requires no math, but it is hard to drive forward slowly and keep straight.
-         leftFrontPower  = -gamepad1.right_trigger;
-         leftRearPower = -gamepad1.right_trigger;
-         rightFrontPower = -gamepad1.right_trigger;
-         rightRearPower = -gamepad1.right_trigger;
-         gripper = -gamepad1.right_trigger;
+         joyStick  = -gamepad1.left_stick_y;
+         //leftRearPower = -gamepad1.;
+         //rightFrontPower = -gamepad1.y;
+         //rightRearPower = -gamepad1.y;
+         //gripper = -gamepad1.y;
 
          if((gamepad1.right_trigger > 0) && (triggerSet == 0)){
              x = x + 1;
@@ -145,9 +156,25 @@ public class TeleOpMode_TankJohn extends OpMode
                  x = 0;
              }
          }
-         else if((triggerSet == 1) && (gamepad1.right_trigger == 0)){
-            triggerSet = 0;
+         else if((triggerSet == 1) && (gamepad1.right_trigger == 0)) {
+             triggerSet = 0;
+         }
+
+         if(x == 0){
+             leftFrontPower = joyStick;
+         }
+         else if(x == 1){
+             rightFrontPower = joyStick;
         }
+        else if(x == 2){
+             leftRearPower = joyStick;
+         }
+         else if(x == 3){
+            rightRearPower = joyStick;
+         }
+         else if(x == 4){
+             gripper = Math.abs(joyStick);
+         }
 
         // Send calculated power to wheels
         if(debug == false) {
@@ -155,13 +182,19 @@ public class TeleOpMode_TankJohn extends OpMode
             rightfrontDrive.setPower(rightFrontPower);
             leftbackDrive.setPower(leftRearPower);
             rightbackDrive.setPower(rightRearPower);
+            servo.setPosition(gripper);
         }
 
         // Show the elapsed game time and wheel power.
         telemetry.addData("Status", "Run Time: " + runtime.toString());
-        telemetry.addData("Motors", "left (%.2f), right (%.2f)", leftFrontPower, rightFrontPower);
-        telemetry.addData("TriggerSet", triggerSet);
+        //telemetry.addData("Motors", "left (%.2f), right (%.2f)", leftFrontPower, rightFrontPower);
+        //telemetry.addData("TriggerSet", triggerSet);
         telemetry.addData("x", x);
+        telemetry.addData("joyStick", joyStick);
+        telemetry.addData("leftFrontPower", leftFrontPower);
+        telemetry.addData("rightFrontPower", rightFrontPower);
+        telemetry.addData("leftRearPower", leftRearPower);
+        telemetry.addData("rightRearPower", rightRearPower);
     }
 
     /*

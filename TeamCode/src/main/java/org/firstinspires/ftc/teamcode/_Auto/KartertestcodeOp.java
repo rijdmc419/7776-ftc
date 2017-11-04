@@ -14,7 +14,7 @@ import org.firstinspires.ftc.teamcode._Libs.AutoLib;
 
 
 // simple example sequence that tests time based "squirrely wheel" drive steps to drive along a prescribed path
-@Autonomous(name="Test: Squirrely Drive Test 1", group ="Test")
+@Autonomous(name="KartertestcodeOp", group ="Opmode")
 //@Disabled
 public class KartertestcodeOp extends OpMode {
 
@@ -34,7 +34,7 @@ public class KartertestcodeOp extends OpMode {
         // get the motors: depending on the factory we created above, these may be
         // either dummy motors that just log data or real ones that drive the hardware
         // assumed order is fr, br, fl, bl
-        /*mMotors = new DcMotor[4];
+        mMotors = new DcMotor[4];/*
         mMotors[0] = mf.getDcMotor("frontRight");
         mMotors[1] = mf.getDcMotor("backRight");
         (mMotors[2] = mf.getDcMotor("frontLeft")).setDirection(DcMotor.Direction.REVERSE);

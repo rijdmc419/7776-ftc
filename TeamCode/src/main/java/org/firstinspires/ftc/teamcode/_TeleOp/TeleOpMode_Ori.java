@@ -34,8 +34,16 @@ import com.qualcomm.robotcore.eventloop.opmode.OpMode;
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
 import com.qualcomm.robotcore.hardware.DcMotor;
 import com.qualcomm.robotcore.hardware.DcMotorSimple;
+import com.qualcomm.robotcore.hardware.Servo;
+import com.qualcomm.robotcore.hardware.ServoController;
 import com.qualcomm.robotcore.util.ElapsedTime;
 import com.qualcomm.robotcore.util.Range;
+
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
+
+import static java.lang.Math.abs;
 
 /**
  * This file contains an example of an iterative (Non-Linear) "OpMode".
@@ -60,6 +68,10 @@ public class TeleOpMode_Ori extends OpMode
     private DcMotor rightfrontDrive = null;
     private DcMotor leftbackDrive = null;
     private DcMotor rightbackDrive = null;
+    private Servo gripper = null;
+    private boolean debug;
+    private double gripperPos = 0;
+    private double gripperChange = 0;
 
     /*
      * Code to run ONCE when the driver hits INIT
@@ -71,16 +83,26 @@ public class TeleOpMode_Ori extends OpMode
         // Initialize the hardware variables. Note that the strings used here as parameters
         // to 'get' must correspond to the names assigned during the robot configuration
         // step (using the FTC Robot Controller app on the phone).
-        leftfrontDrive  = hardwareMap.get(DcMotor.class, "frontLeft");
-        rightfrontDrive = hardwareMap.get(DcMotor.class, "frontRight");
-        leftbackDrive = hardwareMap.get(DcMotor.class, "backLeft");
-        rightbackDrive = hardwareMap.get(DcMotor.class, "backRight");
+        try {
+            leftfrontDrive = hardwareMap.get(DcMotor.class, "frontLeft");
+            rightfrontDrive = hardwareMap.get(DcMotor.class, "frontRight");
+            leftbackDrive = hardwareMap.get(DcMotor.class, "backLeft");
+            rightbackDrive = hardwareMap.get(DcMotor.class, "backRight");
+            gripper = hardwareMap.get(Servo.class, "gripper");
+
+            leftfrontDrive.setDirection(DcMotor.Direction.REVERSE);
+            rightfrontDrive.setDirection(DcMotor.Direction.FORWARD);
+            leftbackDrive.setDirection(DcMotor.Direction.REVERSE);
+            rightbackDrive.setDirection(DcMotor.Direction.FORWARD);
+            //gripper.setPosition(0);
+        }
+        catch(IllegalArgumentException iax) {
+            debug = true;
+        }
+
+
         // Most robots need the motor on one side to be reversed to drive forward
         // Reverse the motor that runs backwards when connected directly to the battery
-        leftfrontDrive.setDirection(DcMotor.Direction.FORWARD);
-        rightfrontDrive.setDirection(DcMotor.Direction.REVERSE);
-        leftbackDrive.setDirection(DcMotor.Direction.FORWARD);
-        rightbackDrive.setDirection(DcMotor.Direction.REVERSE);
         // Tell the driver that initialization is complete.
         telemetry.addData("Status", "Initialized");
     }
@@ -90,6 +112,13 @@ public class TeleOpMode_Ori extends OpMode
      */
     @Override
     public void init_loop() {
+        if (!debug) {
+            leftfrontDrive.setPower(0);
+            rightfrontDrive.setPower(0);
+            leftbackDrive.setPower(0);
+            rightbackDrive.setPower(0);
+        }
+        gripperChange = 0;
     }
 
     /*
@@ -108,31 +137,58 @@ public class TeleOpMode_Ori extends OpMode
         // Setup a variable for each drive wheel to save power level for telemetry
         double powerY;
         double powerX;
-        double powerLeft;
-        double powerRight;
+        double powerLeft = 0;
+        double powerRight = 0;
+        double powerMax = 1;
+        boolean padRight = false;
+        boolean padLeft = false;
+        double gripperIncrement = .01;
 
-        powerY  = -gamepad1.left_stick_y;
+        powerY  = gamepad1.left_stick_y;
         powerX = -gamepad1.right_stick_x;
+        padLeft = gamepad1.dpad_left;
+        padRight = gamepad1.dpad_right;
 
-        powerLeft = powerX + powerY;
-        powerRight = powerX - powerY;
+        powerMax = Collections.max(Arrays.asList(powerMax, powerLeft, powerRight));
 
-        if (powerLeft > powerRight) {
-            powerRight = powerRight / powerLeft;
+        boolean allZero = (abs(powerX) == 0) && (abs(powerY) == 0);
+        double powerTotal = (abs(powerX) + abs(powerY)) > powerMax ? (abs(powerX) + abs(powerY)) : powerMax;
+
+        powerLeft = allZero ? 0 : ((powerX + powerY) / (powerTotal * powerMax));
+        powerLeft = -powerLeft;
+        powerRight = allZero ? 0 : ((powerX - powerY) / (powerTotal * powerMax));
+
+        if (padLeft) {
+            gripperChange = -gripperIncrement;
         }
+
+        else if (padRight) {
+            gripperChange = gripperIncrement;
+        }
+
         else {
-            powerLeft = powerLeft / powerRight;
+            gripperChange = 0;
         }
 
-        // Send calculated power to wheels
-        leftfrontDrive.setPower(powerLeft);
-        rightfrontDrive.setPower(powerRight);
-        leftbackDrive.setPower(powerLeft);
-        rightbackDrive.setPower(powerRight);
+        gripperPos = gripperPos + gripperChange;
+
+        gripperPos = gripperPos > 1 ? 1 : gripperPos < 0 ? 0 : gripperPos;
+
+        if (!debug) {
+            // Send calculated power to wheels
+            leftfrontDrive.setPower(powerLeft);
+            rightfrontDrive.setPower(powerRight);
+            leftbackDrive.setPower(powerLeft);
+            rightbackDrive.setPower(powerRight);
+            gripper.setPosition(gripperPos);
+        }
 
         // Show the elapsed game time and wheel power.
         telemetry.addData("Status", "Run Time: " + runtime.toString());
         telemetry.addData("Motors", "left (%.2f), right (%.2f)", powerLeft, powerRight);
+        telemetry.addData("padRight", padRight);
+        telemetry.addData("padLeft", padLeft);
+        telemetry.addData("gripperPos", gripperPos);
     }
 
     /*

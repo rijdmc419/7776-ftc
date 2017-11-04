@@ -188,6 +188,7 @@ class LookForCryptoBoxStep extends AutoLib.Step {
             int countBlueRight = frame.colorCount(rectRight, CameraLib.colors.eBlue.ordinal(), mBlueFilter);
             mOpMode.telemetry.addData("Red counts", "L=%d  R=%d", countRedLeft, countRedRight);
             mOpMode.telemetry.addData("Blue counts", "L=%d  R=%d", countBlueLeft, countBlueRight);
+            // prh
         }
 
         return false;  // haven't found anything yet

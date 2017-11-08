@@ -62,8 +62,8 @@ public class TeleOpMode_TankJohn extends OpMode
     private DcMotor rightbackDrive = null;
     private Servo servo = null;
 
-    int x;
-    int triggerSet;
+    private int x;
+    private int triggerSet;
 
     /*
      * Code to run ONCE when the driver hits INIT
@@ -72,7 +72,6 @@ public class TeleOpMode_TankJohn extends OpMode
     public void init() {
         x = 0;
         triggerSet = 0;
-        telemetry.addData("Status", "Initialized");
 
         // Initialize the hardware variables. Note that the strings used here as parameters
         // to 'get' must correspond to the names assigned during the robot configuration
@@ -103,10 +102,12 @@ public class TeleOpMode_TankJohn extends OpMode
      */
     @Override
     public void init_loop() {
-        leftfrontDrive.setPower(0);
-        rightfrontDrive.setPower(0);
-        leftbackDrive.setPower(0);
-        rightbackDrive.setPower(0);
+        if(!debug) {
+            leftfrontDrive.setPower(0);
+            rightfrontDrive.setPower(0);
+            leftbackDrive.setPower(0);
+            rightbackDrive.setPower(0);
+        }
     }
 
     /*
@@ -131,51 +132,46 @@ public class TeleOpMode_TankJohn extends OpMode
         double joyStick;
         String nothing = "";
 
+        joyStick  = -gamepad1.left_stick_y;
 
-        // Choose to drive using either Tank Mode, or POV Mode
-        // Comment out the method that's not used.  The default below is POV.
+        if((gamepad1.right_trigger > 0) && (triggerSet == 0)){
+            x = x + 1;
+            triggerSet = 1;
+            if(x > 4){
+                x = 0;
+            }
+        }
+        else if((triggerSet == 1) && (gamepad1.right_trigger == 0)) {
+            triggerSet = 0;
+        }
 
-        // POV Mode uses left stick to go forward, and right stick to turn.
-        // - This uses basic math to combine motions and is easier to drive straight.
-       // double drive = -gamepad1.left_stick_y;
-        //double turn  =  gamepad1.right_stick_x;
-        //leftPower    = Range.clip(drive + turn, -1.0, 1.0) ;
-        //rightPower   = Range.clip(drive - turn, -1.0, 1.0) ;
-
-        // Tank Mode uses one stick to control each wheel.
-        // - This requires no math, but it is hard to drive forward slowly and keep straight.
-         joyStick  = -gamepad1.left_stick_y;
-         //leftRearPower = -gamepad1.;
-         //rightFrontPower = -gamepad1.y;
-         //rightRearPower = -gamepad1.y;
-         //gripper = -gamepad1.y;
-
-         if((gamepad1.right_trigger > 0) && (triggerSet == 0)){
-             x = x + 1;
-             triggerSet = 1;
-             if(x > 4){
-                 x = 0;
-             }
-         }
-         else if((triggerSet == 1) && (gamepad1.right_trigger == 0)) {
-             triggerSet = 0;
-         }
-
-         if(x == 0){
-             leftFrontPower = joyStick;
-         }
-         else if(x == 1){
-             rightFrontPower = joyStick;
+        if(x == 0){
+            leftFrontPower = joyStick;
+            nothing = "leftFront";
+        }
+        else if(x == 1){
+            rightFrontPower = joyStick;
+            nothing = "rightFront";
         }
         else if(x == 2){
-             leftRearPower = joyStick;
-         }
-         else if(x == 3){
+            leftRearPower = joyStick;
+            nothing = "leftRear";
+        }
+        else if(x == 3){
             rightRearPower = joyStick;
-         }
-         else if(x == 4){
-             gripper = Math.abs(joyStick);
-         }
+            nothing = "rightRear";
+        }
+        else if(x == 4){
+            gripper = Math.abs(joyStick);
+            nothing = "gripper";
+        }
+        telemetry.addData("x", x);
+        telemetry.addData("activated: ", nothing);
+        telemetry.addData("leftFrontPower", leftFrontPower);
+        telemetry.addData("rightFrontPower", rightFrontPower);
+        telemetry.addData("leftRearPower", leftRearPower);
+        telemetry.addData("rightRearPower", rightRearPower);
+        telemetry.addData("gripperPosition", gripper);
 
         // Send calculated power to wheels
         if(debug == false) {
@@ -186,32 +182,8 @@ public class TeleOpMode_TankJohn extends OpMode
             servo.setPosition(gripper);
         }
 
-        // Show the elapsed game time and wheel power.
+        // Show the elapsed game time
         telemetry.addData("Status", "Run Time: " + runtime.toString());
-        //telemetry.addData("Motors", "left (%.2f), right (%.2f)", leftFrontPower, rightFrontPower);
-        //telemetry.addData("TriggerSet", triggerSet);
-        telemetry.addData("x", x);
-        if(x == 0){
-            telemetry.addData("Front left motor activated", nothing);
-        }
-        else if(x == 1){
-            telemetry.addData("Front right motor activated", nothing);
-        }
-        else if(x == 2){
-            telemetry.addData("Rear left motor activated", nothing);
-        }
-        else if(x == 3){
-            telemetry.addData("Rear left motor activated", nothing);
-        }
-        else if(x == 4) {
-            telemetry.addData("Gripper activated", nothing);
-        }
-        telemetry.addData("leftFrontPower", leftFrontPower);
-        telemetry.addData("rightFrontPower", rightFrontPower);
-        telemetry.addData("leftRearPower", leftRearPower);
-        telemetry.addData("rightRearPower", rightRearPower);
-        telemetry.addData("Gripper power", gripper);
-        telemetry.addData("joyStick", joyStick);
     }
 
     /*

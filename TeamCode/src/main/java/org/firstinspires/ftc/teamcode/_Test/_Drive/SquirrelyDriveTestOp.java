@@ -57,7 +57,7 @@ public class SquirrelyDriveTestOp extends OpMode {
         mSequence.add(new AutoLib.MoveSquirrelyByTimeStep(mMotors, 180, power, leg, false));
         mSequence.add(new AutoLib.MoveSquirrelyByTimeStep(mMotors, 270, power, leg/2, false));
 
-       /* // ... and then a diamond
+      /* // ... and then a diamond
         mSequence.add(new AutoLib.MoveSquirrelyByTimeStep(mMotors, -45, power, leg, false));
         mSequence.add(new AutoLib.MoveSquirrelyByTimeStep(mMotors, 45, power, leg, false));
         mSequence.add(new AutoLib.MoveSquirrelyByTimeStep(mMotors, 135, power, leg, false));

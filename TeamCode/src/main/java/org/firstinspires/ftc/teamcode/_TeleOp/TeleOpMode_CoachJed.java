@@ -109,10 +109,12 @@ public class TeleOpMode_CoachJed extends OpMode
      */
     @Override
     public void init_loop() {
-        motorFrontRight.setPower(0);
-        motorBackRight.setPower(0);
-        motorFrontLeft.setPower(0);
-        motorBackLeft.setPower(0);
+        if (!bDebug) {
+            motorFrontRight.setPower(0);
+            motorBackRight.setPower(0);
+            motorFrontLeft.setPower(0);
+            motorBackLeft.setPower(0);
+        }
     }
 
     /*

@@ -639,6 +639,7 @@ public class AutoLib {
 
     }
 
+
     // a Step that provides gyro-based guidance to motors controlled by other concurrent Steps (e.g. encoder or time-based)
     // driving "squirrely wheels" that can move sideways by differential turning of front vs. back wheels.
     // assumes 4 concurrent drive motor steps in order right front, right back, left front, left back.
@@ -1511,6 +1512,7 @@ public class AutoLib {
             mPower = power;
             mOpMode.telemetry.addData(mName, " power: " + String.valueOf(mPower));
         }
+
         public double getPower() {
             return mPower;
         }
@@ -1527,6 +1529,7 @@ public class AutoLib {
             mPowerFloat = true;
             mOpMode.telemetry.addData(mName, " setPowerFloat();");
         }
+
         public boolean getPowerFloat() {
             return mPowerFloat;
         }
@@ -1536,6 +1539,7 @@ public class AutoLib {
             mMaxSpeed = encoderTicksPerSecond;
             mOpMode.telemetry.addData(mName, "maxSpeed: " + String.valueOf(encoderTicksPerSecond));
         }
+
         public int getMaxSpeed() { return mMaxSpeed; }
 
         public void setTargetPosition(int position) {
@@ -1545,6 +1549,7 @@ public class AutoLib {
         public int getTargetPosition() {
             return mTargetPosition;
         }
+
         public int getCurrentPosition() {
             return mTargetPosition;
         }
@@ -1553,6 +1558,7 @@ public class AutoLib {
             this.mMode = mode;
             mOpMode.telemetry.addData(mName, "run mode: " + String.valueOf(mode));
         }
+
         public DcMotor.RunMode getMode() {
             return this.mMode;
         }
@@ -1562,11 +1568,13 @@ public class AutoLib {
             mDirection = direction;
             mOpMode.telemetry.addData(mName, "direction: " + String.valueOf(direction));
         }
+
         public Direction getDirection() { return mDirection; }
 
         public String getConnectionInfo() {
             return mName + " port: unknown";
         }
+
         public DcMotorController getController()
         {
             return null;
@@ -1585,6 +1593,7 @@ public class AutoLib {
         {
             return mZeroPowerBehavior;
         }
+
         public void setZeroPowerBehavior(ZeroPowerBehavior zeroPowerBehavior)
         {
             mZeroPowerBehavior = zeroPowerBehavior;
@@ -1594,6 +1603,7 @@ public class AutoLib {
         public String getDeviceName() { return "AutoLib_TestMotor: " + mName; }
 
         public void setMotorType(MotorConfigurationType motorType) { mMotorType = motorType; }
+
         public MotorConfigurationType getMotorType() { return mMotorType; }
 
     }

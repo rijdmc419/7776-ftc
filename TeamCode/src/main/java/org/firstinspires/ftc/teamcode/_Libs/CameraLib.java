@@ -94,7 +94,6 @@ public class CameraLib {
     public static class Pixel extends Color {
         static float[] mHSV = new float[3];     // scratch storage - allocated once at start-up
 
-
         public static String toString(int rgb) {
             return "pixel("+Color.red(rgb)+","+green(rgb)+","+blue(rgb)+")";
         }

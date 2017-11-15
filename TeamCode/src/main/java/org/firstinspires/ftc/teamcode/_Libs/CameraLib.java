@@ -99,7 +99,7 @@ public class CameraLib {
         }
 
         // return hue of given RGB pixel, discretized to 6 principal colors:
-        // Red,Yellow,Green,Cyan,Blue,Magenta (1..6) or, if saturation < threshold, White(0)
+        // Red,Yellow,Green,Cyan,Blue,Magenta (1..6) or, if saturation < threshold, one of 8 gray levels
         public static int hue(int pix) {
             float[] hsv = RGBtoHSV(pix, mHSV);
             if (hsv[1] < 0.20) {
@@ -108,7 +108,7 @@ public class CameraLib {
             int iHue = ((int)hsv[0]+30)/60;         // round to nearest 60 degrees of hue
             if (iHue == 6)
                 iHue = 0;                           // red is either 0 or 360 degrees of hue
-            return iHue+1;          // return discretized hue RYGCBM (1..6)
+            return iHue+1;                          // return discretized hue/gray RYGCBM01234567
         }
 
         // return integer grayscale value (0:255) of a given RGB pixel

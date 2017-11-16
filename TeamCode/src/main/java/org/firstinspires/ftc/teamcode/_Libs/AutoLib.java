@@ -365,32 +365,36 @@ public class AutoLib {
     }
 
     // a Step that drives a Servo to a given position
+    // it would be nice if we got actual position info back from the servo, but that's not
+    // how it works, so we just wait long enough for it to probably get where it's told to go.
     static public class ServoStep extends Step {
         Servo mServo;
         double mPosition;          // target position of servo
-        double mTolerance;
+        Timer mTimer;              // Timer for this Step
 
         public ServoStep(Servo servo, double position) {
             mServo = servo;
             mPosition = position;
-            mTolerance = 0.01;      // 1% of default 0..1 range
-        }
-
-        // if servo is set to non-default range, set tolerance here
-        public void setTolerance(double tolerance) {
-            mTolerance = tolerance;
+            mTimer = null;
         }
 
         public boolean loop() {
             super.loop();
 
-            // tell the servo to go to the target position on the first call
             if (firstLoopCall()) {
+                // tell the servo to go to the target position on the first call
                 mServo.setPosition(mPosition);
+
+                // and start a timer that estimates when the motion will complete
+                // assuming servo goes at about 300 degrees/sec and 0..1 range is about 180 degrees
+                double seconds = (mPosition-mServo.getPosition());
+                mTimer = new Timer(seconds);
+                mTimer.start();
             }
 
-            // we're done when the servo gets to the ordered position (within tolerance)
-            boolean done = Math.abs(mPosition-mServo.getPosition()) < mTolerance;
+            // we're done when we've waited long enough for
+            // the servo to (probably) get to the ordered position
+            boolean done = mTimer.done();
 
             return done;
         }

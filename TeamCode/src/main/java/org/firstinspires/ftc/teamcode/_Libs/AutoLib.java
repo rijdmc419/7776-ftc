@@ -202,6 +202,35 @@ public class AutoLib {
         }
     }
 
+    // a Step that waits until a given test Step has returned true for a given length of time.
+    // e.g. if you want to turn to a given heading, you might wait until a "read gyro" step (like GyroTestHeadingStep)
+    // has reported that you're within 3 degrees of a given heading for 1 second to make
+    // sure you've actually settled at that heading and aren't just "passing through it".
+    static public class WaitTimeTestStep extends Step {
+        Step mTest;         // the "test" Step
+        Timer mTimer;       // Timer for this Step
+
+        public WaitTimeTestStep(Step test, double seconds) {
+            mTest = test;
+            mTimer = new Timer(seconds);
+        }
+
+        public boolean loop() {
+            super.loop();
+
+            // start the Timer on our first call
+            if (firstLoopCall())
+                mTimer.start();
+
+            // if the test Step fails, restart the Timer; else let it keep running
+            if (!mTest.loop())
+                mTimer.start();
+
+            // return true when time is exhausted --
+            // i.e. when the Test has succeeded continuously for the given time
+            return (mTimer.done());
+        }
+    }
 
     // ------------------ some implementations of primitive Steps ----------------------------
 
@@ -567,8 +596,31 @@ public class AutoLib {
         }
     }
 
+    // a Step that returns true iff the given HeadingSensor reports a heading within some tolerance of a desired heading.
+    static public class GyroTestHeadingStep extends Step {
+        private HeadingSensor mSensor;
+        private double mHeading;
+        private double mTolerance;
+
+        public GyroTestHeadingStep(HeadingSensor sensor, double heading, double tol){
+            mSensor = sensor;
+            mHeading = heading;
+            mTolerance = tol;
+        }
+
+        public boolean loop() {
+            super.loop();
+
+            if (mSensor.haveHeading())
+                return (Math.abs(mSensor.getHeading()-mHeading) < mTolerance);
+            else
+                return false;
+        }
+    }
+
     // a Step that stops the given set of motor control steps and terminates
-    // when the given DistanceSensor reports less than a given distance (in mm)
+    // when the given DistanceSensor reports less than a given distance (in mm).
+    // pass in an empty set of motors to just do the test (e.g. for use with WaitTimeTestStep).
     static public class DistanceSensorGuideStep extends Step {
 
         private OpMode mOpMode;                     // for telemetry output (optional)

@@ -87,6 +87,15 @@ public class CameraLib {
         }
     }
 
+    public static class Size {
+        public int width;
+        public int height;
+        public Size(int w, int h) {
+            width = w;
+            height = h;
+        }
+    };
+
     public enum colors { eWhite, eRed, eYellow, eGreen, eCyan, eBlue, eMagenta, eGray };
 
     // a simple utility class that provides a few more operations on an RGB pixel encoded as an int
@@ -174,22 +183,31 @@ public class CameraLib {
         public int map(int i);
     }
 
-    // a simple wrapper around the data returned by the camera callback
-    // assumes the data is in NV21 format (for now)
-    // see http://www.fourcc.org/yuv.php#NV21 for descriptions of various formats
+    // a simple wrapper around image data returned by the camera
+    // that implements various pixel-scanning functions on the image
     public static class CameraImage {
-        Camera.Size mSize;      // size of the camera that took this image
+        Size mSize;      // size of the camera that took this image
         byte[] mData;           // data from Camera preview in NV21 format
         Bitmap mBitmap;         // mData converted to RGB
 
+        // make a CameraImage from Camera data (in NV21 format)
+        // see http://www.fourcc.org/yuv.php#NV21 for descriptions of various formats
         public CameraImage(final byte[] imageData, Camera c) {
             mData = imageData;      // reference to (readonly) image data
             Camera.Parameters camParms = c.getParameters();
-            mSize = camParms.getPictureSize();
-            mBitmap = NV21toRGB.convert(mData, mSize.width, mSize.height);
+            Camera.Size size = camParms.getPictureSize();
+            mBitmap = NV21toRGB.convert(mData, size.width, size.height);
+            mSize = new Size(size.width, size.height);
         }
 
-        public Camera.Size cameraSize() {
+        // wrap an existing Bitmap in a CameraImage so we can use our search functions on it
+        public CameraImage(Bitmap bm) {
+            mBitmap = bm;
+            mSize = new Size(mBitmap.getWidth(), mBitmap.getHeight());
+            mData = null;
+        }
+
+        public Size cameraSize() {
             return mSize;
         }
 

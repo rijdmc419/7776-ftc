@@ -161,7 +161,7 @@ class LookForCryptoBoxStep extends AutoLib.Step {
             }
 
             // test ball finding functions - point camera at scene where the two balls fill the frame (mostly)
-            Camera.Size cSize = frame.cameraSize();
+            CameraLib.Size cSize = frame.cameraSize();
             mOpMode.telemetry.addData("image rectangle", "w=%d h=%d", cSize.width, cSize.height);
 
             // find the most popular color in the left and right halves of the frame and then

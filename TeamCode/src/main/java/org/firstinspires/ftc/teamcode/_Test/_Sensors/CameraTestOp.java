@@ -31,7 +31,7 @@ public class CameraTestOp extends OpMode {
     public void init() {
         mLoopCount = 0;
 
-        if (mCamAcqFr.init(2) == false)     // init camera at 2nd smallest size
+        if (mCamAcqFr.init(1) == false)     // init camera at 2nd smallest size
             telemetry.addData("error: ", "cannot initialize camera");
 
     }
@@ -51,14 +51,14 @@ public class CameraTestOp extends OpMode {
             // ... "move toward the light..."
 
             // log data about the most current image to driver station every loop so it stays up long enough to read
-            Camera.Size camSize = frame.cameraSize();
+            CameraLib.Size camSize = frame.cameraSize();
             telemetry.addData("preview camera size", String.valueOf(camSize.width) + "x" + String.valueOf(camSize.height));
             telemetry.addData("preview data size", frame.dataSize());
             telemetry.addData("preview rgb(center)", String.format("%08X", frame.getPixel(camSize.width / 2, camSize.height / 2)));
             telemetry.addData("frame number", mCamAcqFr.frameCount());
 
             // log text representations of several significant scanlines
-            final int bandSize = 6;
+            final int bandSize = 16;
             telemetry.addData("hue columns", frame.columnHue(bandSize));
             telemetry.addData("dom columns", frame.columnDom(bandSize));
             telemetry.addData("hue a(1/3)", frame.scanlineHue(camSize.height / 3, bandSize));

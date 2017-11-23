@@ -31,7 +31,7 @@ public class CameraTestOp extends OpMode {
     public void init() {
         mLoopCount = 0;
 
-        if (mCamAcqFr.init(1) == false)     // init camera at 2nd smallest size
+        if (mCamAcqFr.init(2) == false)     // init camera at 2nd smallest size
             telemetry.addData("error: ", "cannot initialize camera");
 
     }

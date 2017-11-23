@@ -32,6 +32,8 @@ THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 package org.firstinspires.ftc.teamcode._Test._Sensors;
 
+import android.graphics.Bitmap;
+
 import com.qualcomm.robotcore.eventloop.opmode.Autonomous;
 import com.qualcomm.robotcore.eventloop.opmode.OpMode;
 import com.vuforia.Image;
@@ -39,6 +41,7 @@ import com.vuforia.Image;
 import org.firstinspires.ftc.robotcore.external.matrices.OpenGLMatrix;
 import org.firstinspires.ftc.robotcore.external.navigation.RelicRecoveryVuMark;
 import org.firstinspires.ftc.robotcore.external.navigation.VuforiaLocalizer;
+import org.firstinspires.ftc.teamcode._Libs.CameraLib;
 import org.firstinspires.ftc.teamcode._Libs.VuforiaLib_FTC2016;
 import org.firstinspires.ftc.teamcode._Libs.VuforiaLib_FTC2017;
 
@@ -105,30 +108,20 @@ public class VuforiaNavigationTest2 extends OpMode {
             telemetry.addData("VuMark", "not visible");
         }
 
-        // report the current recognized sign
-
         // test image access through Vuforia
-        //
-
-        VuforiaLocalizer.CloseableFrame f = mVLib.getFrame();
-        if (f != null)
-        {
-            long n = f.getNumImages();
-            telemetry.addData("frame:", "numImages=%3d", n);
-
-            for (int i=0; i<n; i++) {
-                Image image = f.getImage(i);
-                if (image != null)
-                {
-                    int w = image.getWidth();
-                    int h = image.getHeight();
-                    int fmt = image.getFormat();
-                    ByteBuffer buf = image.getPixels();
-                    telemetry.addData("image["+i+"]:", "w=%3d h=%3d fmt=%2d stride=%5d", w, h, fmt, image.getStride());
-                }
-            }
+        Bitmap b = mVLib.getBitmap(4);
+        if (b != null) {
+            CameraLib.CameraImage frame = new CameraLib.CameraImage(b);
+            CameraLib.Size camSize = frame.cameraSize();
+            telemetry.addData("Size", String.valueOf(camSize.width) + "x" + String.valueOf(camSize.height));
+            final int bandSize = 16;
+            telemetry.addData("hue columns", frame.columnHue(bandSize));
+            //telemetry.addData("dom columns", frame.columnDom(bandSize));
+            //telemetry.addData("hue a(1/3)", frame.scanlineHue(camSize.height / 3, bandSize));
+            //telemetry.addData("hue b(1/2)", frame.scanlineHue(camSize.height / 2, bandSize));
+            //telemetry.addData("hue c(2/3)", frame.scanlineHue(2*camSize.height / 3, bandSize));
         }
-        mVLib.releaseFrame(); //
+
     }
 
     @Override public void stop()

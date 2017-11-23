@@ -32,8 +32,14 @@ THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 package org.firstinspires.ftc.teamcode._Libs;
 
+import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
+
 import com.qualcomm.ftcrobotcontroller.R;
 import com.qualcomm.robotcore.eventloop.opmode.OpMode;
+import com.vuforia.Image;
+import com.vuforia.PIXEL_FORMAT;
+import com.vuforia.Vuforia;
 
 import org.firstinspires.ftc.robotcore.external.ClassFactory;
 import org.firstinspires.ftc.robotcore.external.matrices.MatrixF;
@@ -50,6 +56,7 @@ import org.firstinspires.ftc.robotcore.external.navigation.VuforiaTrackableDefau
 import org.firstinspires.ftc.robotcore.external.navigation.VuforiaTrackables;
 import org.firstinspires.ftc.robotcore.internal.vuforia.VuforiaLocalizerImpl;
 
+import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.BlockingQueue;
@@ -171,9 +178,11 @@ public class VuforiaLib_FTC2017 implements HeadingSensor, LocationSensor {
         ((VuforiaTrackableDefaultListener) relicTemplate.getListener()).setPhoneInformation(phoneLocationOnRobot, parameters.cameraDirection);
 
         // get access to video frames so we can do other processing like looking for red/blue beacons
-        vuforia.setFrameQueueCapacity(3);
+        Vuforia.setFrameFormat(PIXEL_FORMAT.RGB888, true); //enables RGB format for the image
+        vuforia.setFrameQueueCapacity(1);
         mFrameQueue = vuforia.getFrameQueue();
         mCF = null;
+
     }
 
     public void start()
@@ -286,7 +295,12 @@ public class VuforiaLib_FTC2017 implements HeadingSensor, LocationSensor {
     public VuforiaLocalizer.CloseableFrame getFrame()
     {
         if (mFrameQueue != null)
-            mCF = mFrameQueue.poll();
+            try {
+                mCF = mFrameQueue.take();
+            }
+            catch (Exception e) {
+                mCF = null;
+            }
         return mCF;
     }
 
@@ -295,5 +309,64 @@ public class VuforiaLib_FTC2017 implements HeadingSensor, LocationSensor {
         if (mCF != null)
             mCF.close();
         mCF = null;         // forget the frame
+    }
+
+    public Bitmap getBitmap(int sample) {
+        try {
+            VuforiaLocalizer.CloseableFrame frame = mFrameQueue.take();
+            int img = 0;
+            for (; img < frame.getNumImages(); img++) {
+                //telemetry.addData("Image format " + img, frame.getImage(img).getFormat());
+                if (frame.getImage(img).getFormat() == PIXEL_FORMAT.RGB888) break;
+            }
+
+            if (img == frame.getNumImages()) throw new IllegalArgumentException("Incorrect format");
+
+            // get the Image with the correct (RGB888) format and extract its data
+            Image image = frame.getImage(img);
+            ByteBuffer byteBuffer3 = image.getPixels();
+
+            // expand RGB888 to ARGB_8888 with optional down-sampling
+            int h3 = image.getHeight();
+            int w3 = image.getWidth();
+            int s3 = image.getStride();
+            int h4 = h3/sample;
+            int w4 = w3/sample;
+
+            // get the RGB888 data from the image ByteBuffer
+            byte[] bytes3 = new byte[byteBuffer3.limit()];
+            byteBuffer3.rewind();
+            byteBuffer3.get(bytes3, 0, bytes3.length);
+
+            // make a byte buffer for down-sampled ARGB_8888 data
+            byte[] bytes4 = new byte[4*w4*h4];
+            int j3 = 0;     // source index at start of each scanline
+            int j4 = 0;     // destination index at start of scanline
+            for (int y=0; y<h4; y++) {          // for each output scanline ...
+                int jsrc = j3;
+                for (int x=0; x<w4; x++) {      //   for each output pixel ...
+                    bytes4[j4++] = bytes3[jsrc+0];      // R
+                    bytes4[j4++] = bytes3[jsrc+1];      // G
+                    bytes4[j4++] = bytes3[jsrc+2];      // B
+                    bytes4[j4++] = -128;                // A
+                    jsrc += 3*sample;
+                }
+                j3 += s3*sample;   // move src pointer to start of next scanline
+            }
+
+            ByteBuffer byteBuffer4 = ByteBuffer.wrap(bytes4);
+
+            // convert the data to a Bitmap
+            byteBuffer4.rewind();
+            Bitmap bitmap = Bitmap.createBitmap(w4, h4, Bitmap.Config.ARGB_8888);
+            bitmap.copyPixelsFromBuffer(byteBuffer4);
+
+            frame.close();
+
+            return bitmap;
+        }
+        catch (Exception e) {}
+
+        return null;
     }
 }

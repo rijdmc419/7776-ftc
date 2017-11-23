@@ -487,8 +487,10 @@ public class CameraLib {
             public void onPreviewFrame(byte[] imageData, Camera camera) {
                 // process the frame and save results in member variables
                 // ...
-                mPreviewImage = new CameraImage(imageData, camera);
-                mNewFrame = true;
+                if (!mNewFrame) {
+                    mPreviewImage = new CameraImage(imageData, camera);
+                    mNewFrame = true;
+                }
                 mFrameCount++;
             }
         };
@@ -524,8 +526,8 @@ public class CameraLib {
                 mNewFrame = false;
                 // start another frame acquisition
                 try {
-                    mCamera.setPreviewCallback(mPreviewCallback);
-                    mCamera.startPreview();
+                    //mCamera.setPreviewCallback(mPreviewCallback);
+                    //mCamera.startPreview();
                 }
                 catch (Exception e) {
                     return null;

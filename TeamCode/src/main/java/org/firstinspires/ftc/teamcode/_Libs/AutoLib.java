@@ -484,10 +484,20 @@ public class AutoLib {
 
     // some Steps that use various sensor input to control other Steps
 
+    // interface for setting the current power of either kind of MotorStep
+    public interface SetMotorSteps {
+        public void set(ArrayList<AutoLib.SetPower> motorsteps);
+    }
+
+    static public abstract class MotorGuideStep extends AutoLib.Step implements SetMotorSteps {
+        public void set(ArrayList<AutoLib.SetPower> motorsteps){}
+    }
+
+
     // a Step that provides gyro-based guidance to motors controlled by other concurrent Steps (e.g. encoder or time-based)
     // assumes an even number of concurrent drive motor steps in order right ..., left ...
     // this step tries to keep the robot on the given course by adjusting the left vs. right motors to change the robot's heading.
-    static public class GyroGuideStep extends Step {
+    static public class GyroGuideStep extends MotorGuideStep {
         private float mPower;                               // basic power setting of all 4 motors -- adjusted for steering along path
         private float mHeading;                             // compass heading to steer for (-180 .. +180 degrees)
         private OpMode mOpMode;                             // needed so we can log output (may be null)
@@ -505,6 +515,12 @@ public class AutoLib {
             mPid = pid;
             mMotorSteps = motorsteps;
             mPower = power;
+        }
+
+        // set motor control steps this step should control (assumes ctor called with null argument)
+        public void set(ArrayList<AutoLib.SetPower> motorsteps)
+        {
+            mMotorSteps = motorsteps;
         }
 
         public boolean loop()
@@ -651,15 +667,6 @@ public class AutoLib {
             }
             return done;
         }
-    }
-
-    // interface for setting the current power of either kind of MotorStep
-    public interface SetMotorSteps {
-        public void set(ArrayList<AutoLib.SetPower> motorsteps);
-    }
-
-    static public abstract class MotorGuideStep extends AutoLib.Step implements SetMotorSteps {
-        public void set(ArrayList<AutoLib.SetPower> motorsteps){}
     }
 
     // a generic Step that uses a MotorGuideStep to steer the robot while driving along a given path

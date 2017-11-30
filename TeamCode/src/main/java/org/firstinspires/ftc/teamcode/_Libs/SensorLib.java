@@ -194,7 +194,7 @@ public class SensorLib {
 
         public void stop()
         {
-            mGyro.close();
+            // mGyro.close();           // this causes big problems with REV hub ???
         }
     }
 

@@ -195,7 +195,7 @@ public class SensorLib {
         public void stop()
         {
             mGyro.close();
-        }
+        }       // ???? causes problem with REV hub ????
     }
 
     // class that wraps UltrasonicSensor in a DistanceSensor interface

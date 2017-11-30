@@ -32,6 +32,7 @@ THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 package org.firstinspires.ftc.teamcode._Test._AutoLib;
 
+import android.graphics.Bitmap;
 import android.graphics.Point;
 import android.graphics.Rect;
 import android.hardware.Camera;
@@ -56,7 +57,7 @@ import java.util.regex.Pattern;
 
 /**
  * This OpMode uses a Step that uses the VuforiaLib_FTC2017 library to determine
- * which column of the shelves to fill first, then shuts down Vuforia and
+ * which column of the shelves to fill first, then
  * moves the robot under gyro control while using the camera to look for the
  * correct Cryptobox to stop at.
  */
@@ -67,28 +68,20 @@ class VuforiaGetMarkStep extends AutoLib.Step {
     OpMode mOpMode;
     LookForCryptoBoxStep mMTCBStep;
 
-    public VuforiaGetMarkStep(OpMode opMode, LookForCryptoBoxStep step) {
+    public VuforiaGetMarkStep(OpMode opMode, VuforiaLib_FTC2017 VLib, LookForCryptoBoxStep step) {
         mOpMode = opMode;
+        mVLib = VLib;
         mMTCBStep = step;
-
-        // best to do this now, which is called from opmode's init() function
-        mVLib = new VuforiaLib_FTC2017();
-        mVLib.init(mOpMode, null);
     }
 
     public boolean loop() {
         super.loop();
-        if (firstLoopCall()) {
-            mVLib.start();
-        }
         mVLib.loop();       // update recognition info
         RelicRecoveryVuMark vuMark = mVLib.getVuMark();
         boolean found = (vuMark != RelicRecoveryVuMark.UNKNOWN);
         if (found) {
             // Found an instance of the template -- tell "MoveTo.. step which one
             mMTCBStep.setVuMarkString(vuMark.toString());
-            // shut down Vuforia - we're done with it
-            mVLib.stop();
         }
         return found;       // done?
     }
@@ -110,39 +103,35 @@ class BlueFilter implements CameraLib.Filter {
 //
 class LookForCryptoBoxStep extends AutoLib.Step {
     String mVuMarkString;
-    CameraLib.CameraAcquireFrames mCamAcqFr;
+    VuforiaLib_FTC2017 mVLib;
     boolean mCameraActive;
     OpMode mOpMode;
     int mCBColumn;              // which Cryptobox column we're looking for
     Pattern mPattern;           // compiled regexp pattern we'll use to find the pattern we're looking for
     CameraLib.Filter mBlueFilter;       // filter to map cyan to blue
 
-    public LookForCryptoBoxStep(OpMode opMode, String pattern) {
+    public LookForCryptoBoxStep(OpMode opMode, VuforiaLib_FTC2017 VLib, String pattern) {
         mOpMode = opMode;
         mCBColumn = -1;     // unknown
         mPattern = Pattern.compile(pattern);    // look for the given pattern of column colors
         mBlueFilter = new BlueFilter();
+        mVLib = VLib;
     }
 
     public void setVuMarkString(String s) { mVuMarkString = s; }
 
     public boolean loop() {
         super.loop();
-        if (firstLoopCall()) {
-            mCamAcqFr = new CameraLib.CameraAcquireFrames();
-            mCameraActive = mCamAcqFr.init(2);
-            if (mCameraActive == false)     // init camera at 2nd smallest size
-                mOpMode.telemetry.addData("error: ", "cannot initialize camera");
-        }
         mOpMode.telemetry.addData("VuMark", "%s found", mVuMarkString);
 
-        // get most recent frame from camera (may be same as last time or null)
-        CameraLib.CameraImage frame = mCamAcqFr.loop();
+        // get most recent frame from camera (through Vuforia)
+        Bitmap bitmap = mVLib.getBitmap(4);                         // get reduced-resolution image from Vuforia
+        CameraLib.CameraImage frame = new CameraLib.CameraImage(bitmap);    // .. and wrap it in a CameraImage
 
-        if (frame != null) {
+        if (bitmap != null && frame != null) {
             // look for cryptobox columns
             // get unfiltered view of colors (hues) by full-image-height column bands
-            final int bandSize = 6;
+            final int bandSize = 8;
             String colHue = frame.columnHue(bandSize);
 
             // log debug info ...
@@ -160,6 +149,7 @@ class LookForCryptoBoxStep extends AutoLib.Step {
                 }
             }
 
+            /*
             // test ball finding functions - point camera at scene where the two balls fill the frame (mostly)
             CameraLib.Size cSize = frame.cameraSize();
             mOpMode.telemetry.addData("image rectangle", "w=%d h=%d", cSize.width, cSize.height);
@@ -188,16 +178,13 @@ class LookForCryptoBoxStep extends AutoLib.Step {
             int countBlueRight = frame.colorCount(rectRight, CameraLib.colors.eBlue.ordinal(), mBlueFilter);
             mOpMode.telemetry.addData("Red counts", "L=%d  R=%d", countRedLeft, countRedRight);
             mOpMode.telemetry.addData("Blue counts", "L=%d  R=%d", countBlueLeft, countBlueRight);
-            // prh
+            */
         }
 
         return false;  // haven't found anything yet
     }
 
     public void stop() {
-        if (mCameraActive)
-            mCamAcqFr.stop();
-        mCameraActive = false;
     }
 }
 
@@ -212,6 +199,7 @@ public class FirstRelicRecAuto1 extends OpMode {
     GyroSensor mGyro;                       // gyro to use for heading information
     SensorLib.CorrectedGyro mCorrGyro;      // gyro corrector object
     LookForCryptoBoxStep mTerminatorStep;   // needs to be class data so stop() function can access camera
+    VuforiaLib_FTC2017 mVLib;               // Vuforia wrapper object used by Steps
 
     public void init() {}
 
@@ -241,13 +229,17 @@ public class FirstRelicRecAuto1 extends OpMode {
         mCorrGyro = new SensorLib.CorrectedGyro(mGyro);
         mCorrGyro.calibrate();
 
+        // best to do this now, which is called from opmode's init() function
+        mVLib = new VuforiaLib_FTC2017();
+        mVLib.init(this, null);
+
         // create the root Sequence for this autonomous OpMode
         mSequence = new AutoLib.LinearSequence();
         // make a step that terminates the motion step by looking for a particular (red or blue) Cryptobox
-        mTerminatorStep = new LookForCryptoBoxStep(this, bLookForBlue ? "^b+" : "^r+");
+        mTerminatorStep = new LookForCryptoBoxStep(this, mVLib, bLookForBlue ? "^b+" : "^r+");
         // make and add to the sequence the step that looks for the Vuforia marker and sets the column (Left,Center,Right)
         // the motion terminator step should look for
-        mSequence.add(new VuforiaGetMarkStep(this, mTerminatorStep));
+        mSequence.add(new VuforiaGetMarkStep(this, mVLib, mTerminatorStep));
         AutoLib.MotorGuideStep guideStep = new AutoLib.SquirrelyGyroGuideStep(this, 90, 0, mCorrGyro, null, null, 0.5f);
         // make and add the Step that goes to the indicated Cryptobox bin
         mSequence.add(new AutoLib.GuidedTerminatedDriveStep(this, guideStep, mTerminatorStep, mMotors));
@@ -259,6 +251,9 @@ public class FirstRelicRecAuto1 extends OpMode {
     {
         // start out not-done
         bDone = false;
+
+        // start Vuforia scanning
+        mVLib.start();
     }
 
     @Override
@@ -274,7 +269,7 @@ public class FirstRelicRecAuto1 extends OpMode {
     @Override
     public void stop() {
         super.stop();
-        mTerminatorStep.stop();     // make sure the Camera is released
+        mVLib.stop();     // make sure the Camera is released by Vuforia
     }
 
 }

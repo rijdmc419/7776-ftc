@@ -62,16 +62,22 @@ import java.util.regex.Pattern;
  * correct Cryptobox to stop at.
  */
 
+// define an interface through which a Step (or anything else) can be told the
+// identity of the Vuforia target that we should use
+interface SetMark {
+    public void setMark(String s);
+}
+
 class VuforiaGetMarkStep extends AutoLib.Step {
 
     VuforiaLib_FTC2017 mVLib;
     OpMode mOpMode;
-    LookForCryptoBoxStep mMTCBStep;
+    SetMark mSMStep;
 
-    public VuforiaGetMarkStep(OpMode opMode, VuforiaLib_FTC2017 VLib, LookForCryptoBoxStep step) {
+    public VuforiaGetMarkStep(OpMode opMode, VuforiaLib_FTC2017 VLib, SetMark step) {
         mOpMode = opMode;
         mVLib = VLib;
-        mMTCBStep = step;
+        mSMStep = step;
     }
 
     public boolean loop() {
@@ -81,7 +87,7 @@ class VuforiaGetMarkStep extends AutoLib.Step {
         boolean found = (vuMark != RelicRecoveryVuMark.UNKNOWN);
         if (found) {
             // Found an instance of the template -- tell "MoveTo.. step which one
-            mMTCBStep.setVuMarkString(vuMark.toString());
+            mSMStep.setMark(vuMark.toString());
         }
         return found;       // done?
     }
@@ -101,7 +107,7 @@ class BlueFilter implements CameraLib.Filter {
 // determine when the appropriate CryptoBox is in sight, at which time
 // it terminates the GuidedTerminatedDriveStep of which it is part
 //
-class LookForCryptoBoxStep extends AutoLib.Step {
+class LookForCryptoBoxStep extends AutoLib.Step implements SetMark {
     String mVuMarkString;
     VuforiaLib_FTC2017 mVLib;
     boolean mCameraActive;
@@ -118,7 +124,7 @@ class LookForCryptoBoxStep extends AutoLib.Step {
         mVLib = VLib;
     }
 
-    public void setVuMarkString(String s) { mVuMarkString = s; }
+    public void setMark(String s) { mVuMarkString = s; }
 
     public boolean loop() {
         super.loop();

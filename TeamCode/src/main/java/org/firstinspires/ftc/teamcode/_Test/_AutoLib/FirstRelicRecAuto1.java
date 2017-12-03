@@ -103,31 +103,89 @@ class BlueFilter implements CameraLib.Filter {
     }
 }
 
-// this is a guide step that starts up the Camera and uses it to
-// determine when the appropriate CryptoBox is in sight, at which time
-// it terminates the GuidedTerminatedDriveStep of which it is part
+// simple data class containing info about image of one column of cryptobox
+class ColumnHit {
+    int mStart;
+    int mEnd;
+    public ColumnHit(int start, int end) {
+        mStart = start;  mEnd = end;
+    }
+    public int start() { return mStart; }
+    public int end() { return mEnd; }
+    public int mid() { return (mStart+mEnd)/2; }
+}
+
+// this is a guide step that uses camera image data to
+// guide the robot to the indicated bin of the cryptobox
 //
-class LookForCryptoBoxStep extends AutoLib.Step implements SetMark {
-    String mVuMarkString;
+class GoToCryptoBoxGuideStep extends AutoLib.MotorGuideStep implements SetMark {
+
     VuforiaLib_FTC2017 mVLib;
-    boolean mCameraActive;
+    String mVuMarkString;
     OpMode mOpMode;
-    int mCBColumn;              // which Cryptobox column we're looking for
-    Pattern mPattern;           // compiled regexp pattern we'll use to find the pattern we're looking for
+    int mCBColumn;                      // which Cryptobox column we're looking for
+    Pattern mPattern;                   // compiled regexp pattern we'll use to find the pattern we're looking for
+
     CameraLib.Filter mBlueFilter;       // filter to map cyan to blue
 
-    public LookForCryptoBoxStep(OpMode opMode, VuforiaLib_FTC2017 VLib, String pattern) {
+    ArrayList<ColumnHit> mPrevColumns;  // detected columns on previous pass
+
+    SensorLib.PID mPid;                 // proportional–integral–derivative controller (PID controller)
+    double mPrevTime;                   // time of previous loop() call
+    ArrayList<AutoLib.SetPower> mMotorSteps;   // the motor steps we're guiding - assumed order is right ... left ...
+    float mPower;                      // base power setting for motors
+
+    public GoToCryptoBoxGuideStep(OpMode opMode, VuforiaLib_FTC2017 VLib, String pattern, float power) {
         mOpMode = opMode;
-        mCBColumn = -1;     // unknown
+        mCBColumn = 1;     // if we never get a cryptobox directive from Vuforia, go for the first bin
         mPattern = Pattern.compile(pattern);    // look for the given pattern of column colors
         mBlueFilter = new BlueFilter();
         mVLib = VLib;
+        mMotorSteps = null;     // this will be filled in by call from parent step
+        mPower = power;
+        mPrevColumns = null;
+
+        // construct a default PID controller for correcting heading errors
+        final float Kp = 0.2f;         // degree heading proportional term correction per degree of deviation
+        final float Ki = 0.0f;         // ... integrator term
+        final float Kd = 0.0f;         // ... derivative term
+        final float KiCutoff = 3.0f;   // maximum angle error for which we update integrator
+        mPid = new SensorLib.PID(Kp, Ki, Kd, KiCutoff);
+
     }
 
-    public void setMark(String s) { mVuMarkString = s; }
+    public void setMark(String s) {
+        mVuMarkString = s;
+
+        // compute index of column that forms the left side of the desired bin.
+        // this assumes the camera is mounted to the left of the carried block.
+        if (mVuMarkString == "LEFT")
+            mCBColumn = 0;
+        else
+            if (mVuMarkString == "CENTER")
+                mCBColumn = 1;
+        else
+            if (mVuMarkString == "RIGHT")
+                mCBColumn = 2;
+
+        // if the camera is on the right side of the block, we want the right edge of the bin.
+        final boolean bCameraOnRight = true;
+        if (bCameraOnRight)
+            mCBColumn++;
+    }
+
+    public void set(ArrayList<AutoLib.SetPower> motorSteps){
+        mMotorSteps = motorSteps;
+    }
 
     public boolean loop() {
         super.loop();
+
+        // initialize previous-time on our first call -> dt will be zero on first call
+        if (firstLoopCall()) {
+            mPrevTime = mOpMode.getRuntime();           // use timer provided by OpMode
+        }
+
         mOpMode.telemetry.addData("VuMark", "%s found", mVuMarkString);
 
         // get most recent frame from camera (through Vuforia)
@@ -143,18 +201,88 @@ class LookForCryptoBoxStep extends AutoLib.Step implements SetMark {
             // log debug info ...
             mOpMode.telemetry.addData("hue columns", colHue);
 
-            // look for occurrences of given pattern of column colors and report them in telemetry
-            int patternStart = 0;
-            int patternSize = 0;
+            // look for occurrences of given pattern of column colors
+            ArrayList<ColumnHit> columns = new ArrayList<ColumnHit>(8);       // array of column start/end indices
+
             for (int i=0; i<colHue.length(); i++) {
                 // starting at position (i), look for the given pattern in the encoded (rgbcymw) scanline
                 Matcher m = mPattern.matcher(colHue.substring(i));
-                if (m.lookingAt() /* && m.groupCount() == 1 */) {
-                    mOpMode.telemetry.addData("found ", "%s from %d to %d", mPattern.pattern(), i+m.start(), i+m.end()-1);
-                    i += m.end();       // skip over this match
+                if (m.lookingAt()) {
+                    // add start/end info about this hit to the array
+                    columns.add(new ColumnHit(i+m.start(), i+m.end()-1));
+
+                    // skip over this match
+                    i += m.end();
                 }
             }
-            
+
+            // report the matches in telemetry
+            for (ColumnHit h : columns) {
+                mOpMode.telemetry.addData("found ", "%s from %d to %d", mPattern.pattern(), h.start(), h.end());
+            }
+
+            // if we found some columns, try to correct course using their positions in the image
+            int nCol = columns.size();
+            if (nCol > mCBColumn) {
+                // to start, we need to see all four columns to know where we're going ...
+                // after that, we try to match up the columns visible in this view with those from the previous pass
+                // TBD
+
+                // compute average distance between columns = distance between outermost / #bins
+                float avgBinWidth = (float)(columns.get(nCol-1).end() - columns.get(0).start()) / (float)(nCol-1);
+
+                // compute camera offset from near-side column of target bin (whichever side camera is to the block holder)
+                final float cameraOffset = 0.2f;        // e.g. camera is 0.2 x bin width to the right of block centerline
+                float cameraBinOffset = avgBinWidth * cameraOffset;
+                // camera target is center of target column + camera offset in image-string space
+                float cameraTarget = columns.get(mCBColumn).mid() + cameraBinOffset;
+
+                // the above computed target point should be in the middle of the image if we're on course -
+                // if not, correct our course to center it --
+                // compute fractional error = fraction of image offset of target from center = [-1 .. +1]
+                float error = (cameraTarget - (float)colHue.length()/2.0f) / ((float)colHue.length()/2.0f);
+
+                // compute motor correction from error through PID --
+                // for now, convert image-string error to angle and use standard "gyro" PID
+                final float cameraHalfFOVdeg = 28.0f;       // half angle FOV is about 28 degrees
+                float angError = error * cameraHalfFOVdeg;
+
+                mOpMode.telemetry.addData("data", "avgWidth= %f  target=%f  angError=%f", avgBinWidth, cameraTarget, angError);
+
+                // compute delta time since last call -- used for integration time of PID step
+                double time = mOpMode.getRuntime();
+                double dt = time - mPrevTime;
+                mPrevTime = time;
+
+                // feed error through PID to get motor power correction value
+                float correction = -mPid.loop(error, (float)dt);
+
+                // compute new right/left motor powers
+                float rightPower = mPower + correction;
+                float leftPower = mPower - correction;
+
+                // normalize so neither has magnitude > 1
+                float norm = AutoLib.normalize(rightPower, leftPower);
+                rightPower *= norm;
+                leftPower *= norm;
+
+                // set the motor powers -- handle both time-based and encoder-based motor Steps
+                // assumed order is right motors followed by an equal number of left motors
+                int i = 0;
+                for (AutoLib.SetPower ms : mMotorSteps) {
+                    ms.setPower((i++ < mMotorSteps.size()/2) ? rightPower : leftPower);
+                }
+
+                mOpMode.telemetry.addData("motors", "left=%f right=%f", leftPower, rightPower);
+            }
+            else {
+                // stop all the motors and return "done"
+                for (AutoLib.SetPower ms : mMotorSteps) {
+                    ms.setPower(0.0);
+                }
+                //return true;
+            }
+
         }
 
         return false;  // haven't found anything yet
@@ -174,7 +302,6 @@ public class FirstRelicRecAuto1 extends OpMode {
     DcMotor mMotors[];                      // motors, some of which can be null: assumed order is fr, br, fl, bl
     GyroSensor mGyro;                       // gyro to use for heading information
     SensorLib.CorrectedGyro mCorrGyro;      // gyro corrector object
-    LookForCryptoBoxStep mTerminatorStep;   // needs to be class data so stop() function can access camera
     VuforiaLib_FTC2017 mVLib;               // Vuforia wrapper object used by Steps
 
     public void init() {}
@@ -211,16 +338,16 @@ public class FirstRelicRecAuto1 extends OpMode {
 
         // create the root Sequence for this autonomous OpMode
         mSequence = new AutoLib.LinearSequence();
-        // make a step that terminates the motion step by looking for a particular (red or blue) Cryptobox
-        mTerminatorStep = new LookForCryptoBoxStep(this, mVLib, bLookForBlue ? "^b+" : "^r+");
+        // make a step that guides the motion step by looking for a particular (red or blue) Cryptobox
+        // it also implements the SetMark interface so VuforiaGetMarkStep can call it to tell which box to go for
+        AutoLib.MotorGuideStep guideStep  = new GoToCryptoBoxGuideStep(this, mVLib, bLookForBlue ? "^b+" : "^r+", 0.6f);
         // make and add to the sequence the step that looks for the Vuforia marker and sets the column (Left,Center,Right)
         // the motion terminator step should look for
-        mSequence.add(new VuforiaGetMarkStep(this, mVLib, mTerminatorStep));
-        AutoLib.MotorGuideStep guideStep = new AutoLib.SquirrelyGyroGuideStep(this, 90, 0, mCorrGyro, null, null, 0.5f);
+        mSequence.add(new VuforiaGetMarkStep(this, mVLib, (SetMark)guideStep));
         // make and add the Step that goes to the indicated Cryptobox bin
-        mSequence.add(new AutoLib.GuidedTerminatedDriveStep(this, guideStep, mTerminatorStep, mMotors));
-        // make and add a step that stops all motors
-        mSequence.add(new AutoLib.MoveByTimeStep(mMotors, 0, 0, true));
+        mSequence.add(new AutoLib.GuidedTerminatedDriveStep(this, guideStep, null, mMotors));
+        // make and add a step that tells us we're done
+        mSequence.add(new AutoLib.LogTimeStep(this,"Done!", 5));
     }
 
     @Override public void start()

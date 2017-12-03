@@ -35,6 +35,7 @@ package org.firstinspires.ftc.teamcode._Test._AutoLib;
 import android.graphics.Bitmap;
 import android.graphics.Point;
 import android.graphics.Rect;
+import android.graphics.RectF;
 import android.hardware.Camera;
 
 import com.qualcomm.hardware.modernrobotics.ModernRoboticsI2cGyro;
@@ -191,8 +192,10 @@ class GoToCryptoBoxGuideStep extends AutoLib.MotorGuideStep implements SetMark {
         mOpMode.telemetry.addData("VuMark", "%s found", mVuMarkString);
 
         // get most recent frame from camera (through Vuforia)
-        Bitmap bitmap = mVLib.getBitmap(4);                         // get reduced-resolution image from Vuforia
-        CameraLib.CameraImage frame = new CameraLib.CameraImage(bitmap);    // .. and wrap it in a CameraImage
+        //RectF rect = new RectF(0,0.25f,1f,0.75f);      // middle half of the image should be enough
+        //Bitmap bitmap = mVLib.getBitmap(rect, 4);                      // get cropped, downsampled image from Vuforia
+        Bitmap bitmap = mVLib.getBitmap(4);                      // get uncropped, downsampled image from Vuforia
+        CameraLib.CameraImage frame = new CameraLib.CameraImage(bitmap);       // .. and wrap it in a CameraImage
 
         if (bitmap != null && frame != null) {
             // look for cryptobox columns
@@ -295,18 +298,19 @@ class GoToCryptoBoxGuideStep extends AutoLib.MotorGuideStep implements SetMark {
 
                 mOpMode.telemetry.addData("motors", "left=%f right=%f", leftPower, rightPower);
             }
-            else {
+
+            // when we're really close ... i.e. when the bin width is really big ... we're done
+            if (avgBinWidth > colHue.length()/2) {          // for now, when bin width > 1/2 FOV
                 // stop all the motors and return "done"
                 for (AutoLib.SetPower ms : mMotorSteps) {
                     ms.setPower(0.0);
                 }
-                //return true;
+                return true;
             }
 
             // save column hits for next pass to help handle columns leaving the field of view of
             // the camera as we get close.
             mPrevColumns = columns;
-            columns = null;
 
         }
 

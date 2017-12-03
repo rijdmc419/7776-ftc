@@ -225,13 +225,23 @@ class GoToCryptoBoxGuideStep extends AutoLib.MotorGuideStep implements SetMark {
 
             int nCol = columns.size();
 
-            // try to handle case where a column has left the left-edge of the frame between the prev view and this one
-            if (mPrevColumns != null  &&  mPrevColumns.size()>0) {
+            // compute average distance between columns = distance between outermost / #bins
+            float avgBinWidth = nCol>1 ? (float)(columns.get(nCol-1).end() - columns.get(0).start()) / (float)(nCol-1) : 0;
+
+            // try to handle case where a column has left (or entered) the left-edge of the frame between the prev view and this one
+            if (mPrevColumns != null  &&  mPrevColumns.size()>0  &&  nCol>0) {
                 // if the left-most column of the previous frame started at the left edge of the frame
-                // and the left edge of the current left-most column is to the right of the right edge of the left-most column of the previous frame
+                // and the left edge of the current left-most column is about a bin-width to the right of the right edge of the
+                // left-most column of the previous frame
                 // then it's probably the case that the current left-most column is actually the second column of the previous frame.
-                if (mPrevColumns.get(0).start() == 0  &&  nCol > 0  && columns.get(0).start() > mPrevColumns.get(0).end()) {
+                if (mPrevColumns.get(0).start() == 0  && columns.get(0).start() > (mPrevColumns.get(0).end()+0.5*avgBinWidth)) {
                     mColumnOffset++;
+                }
+
+                // if the left-most column of the previous frame was not near the left edge of the frame
+                // but now there is a column at the left edge, then one probably entered the frame.
+                if (mPrevColumns.get(0).start() > 0.5*avgBinWidth  &&  columns.get(0).start() == 0) {
+                    mColumnOffset--;
                 }
             }
 
@@ -240,9 +250,6 @@ class GoToCryptoBoxGuideStep extends AutoLib.MotorGuideStep implements SetMark {
                 // to start, we need to see all four columns to know where we're going ...
                 // after that, we try to match up the columns visible in this view with those from the previous pass
                 // TBD
-
-                // compute average distance between columns = distance between outermost / #bins
-                float avgBinWidth = (float)(columns.get(nCol-1).end() - columns.get(0).start()) / (float)(nCol-1);
 
                 // compute camera offset from near-side column of target bin (whichever side camera is to the block holder)
                 final float cameraOffset = 0.2f;        // e.g. camera is 0.2 x bin width to the right of block centerline
@@ -260,7 +267,7 @@ class GoToCryptoBoxGuideStep extends AutoLib.MotorGuideStep implements SetMark {
                 final float cameraHalfFOVdeg = 28.0f;       // half angle FOV is about 28 degrees
                 float angError = error * cameraHalfFOVdeg;
 
-                mOpMode.telemetry.addData("data", "avgWidth= %f  target=%f  angError=%f", avgBinWidth, cameraTarget, angError);
+                mOpMode.telemetry.addData("data", "avgWidth= %f  target=%f  angError=%f  mColOff=%d", avgBinWidth, cameraTarget, angError, mColumnOffset);
 
                 // compute delta time since last call -- used for integration time of PID step
                 double time = mOpMode.getRuntime();

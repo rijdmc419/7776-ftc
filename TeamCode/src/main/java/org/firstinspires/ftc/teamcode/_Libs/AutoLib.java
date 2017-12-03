@@ -512,7 +512,16 @@ public class AutoLib {
             mOpMode = mode;
             mHeading = heading;
             mGyro = gyro;
-            mPid = pid;
+            if (pid != null)
+                mPid = pid;     // client is supplying PID controller for correcting heading errors
+            else {
+                // construct a default PID controller for correcting heading errors
+                final float Kp = 0.05f;        // degree heading proportional term correction per degree of deviation
+                final float Ki = 0.02f;        // ... integrator term
+                final float Kd = 0.0f;         // ... derivative term
+                final float KiCutoff = 3.0f;   // maximum angle error for which we update integrator
+                mPid = new SensorLib.PID(Kp, Ki, Kd, KiCutoff);
+            }
             mMotorSteps = motorsteps;
             mPower = power;
         }
@@ -673,25 +682,28 @@ public class AutoLib {
     // until the terminatorStep tells us that we're there, thereby terminating this step.
     static public class GuidedTerminatedDriveStep extends AutoLib.ConcurrentSequence {
 
-        public GuidedTerminatedDriveStep(OpMode mode, AutoLib.MotorGuideStep guideStep, AutoLib.Step terminatorStep, DcMotor[] motors)
+        public GuidedTerminatedDriveStep(OpMode mode, AutoLib.MotorGuideStep guideStep, AutoLib.MotorGuideStep terminatorStep, DcMotor[] motors)
         {
             // add a concurrent Step to control each motor
             ArrayList<AutoLib.SetPower> steps = new ArrayList<AutoLib.SetPower>();
             for (DcMotor em : motors)
                 if (em != null) {
                     AutoLib.TimedMotorStep step = new AutoLib.TimedMotorStep(em, 0, 0, false);
-                    // the terminatorStep will stop the motors and complete the sequence
+                    // the guide or terminator Step will stop the motors and complete the sequence
                     this.add(step);
                     steps.add(step);
                 }
 
-            // add a concurrent Step that terminates the whole sequence when we're "there"
-            this.preAdd(terminatorStep);
+            // if there's a separate terminator step, tell it about the motor steps and add it to the sequence
+            if (terminatorStep != null) {
+                terminatorStep.set(steps);
+                this.preAdd(terminatorStep);
+            }
 
             // tell the guideStep about the motor Steps it should control
             guideStep.set(steps);
 
-            // add a concurrent Step to control the motor steps based on gyro input
+            // add a concurrent Step to control the motor steps based on sensor (gyro, camera, etc.) input
             // put it at the front of the list so it can update the motors BEFORE their steps run
             // and BEFORE the terminatorStep might try to turn the motors off.
             this.preAdd(guideStep);
@@ -724,7 +736,7 @@ public class AutoLib {
             mDirection = direction;
             mHeading = heading;
             mGyro = gyro;
-            if (mPid != null)
+            if (pid != null)
                 mPid = pid;     // client is supplying PID controller for correcting heading errors
             else {
                 // construct a default PID controller for correcting heading errors

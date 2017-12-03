@@ -35,10 +35,10 @@ public class SquirrelyDriveTestOp extends OpMode {
         // either dummy motors that just log data or real ones that drive the hardware
         // assumed order is fr, br, fl, bl
         mMotors = new DcMotor[4];
-        mMotors[0] = mf.getDcMotor("frontRight");
-        mMotors[1] = mf.getDcMotor("backRight");
-        (mMotors[2] = mf.getDcMotor("frontLeft")).setDirection(DcMotor.Direction.REVERSE);
-        (mMotors[3] = mf.getDcMotor("backLeft")).setDirection(DcMotor.Direction.REVERSE);
+        mMotors[0] = mf.getDcMotor("fr");
+        mMotors[1] = mf.getDcMotor("br");
+        (mMotors[2] = mf.getDcMotor("fl")).setDirection(DcMotor.Direction.REVERSE);
+        (mMotors[3] = mf.getDcMotor("bl")).setDirection(DcMotor.Direction.REVERSE);
 
         // create an autonomous sequence with the steps to drive
         // several legs of a polygonal course ---

@@ -83,14 +83,24 @@ public class AbsoluteSquirrelyGyroDrive1 extends OpMode {
 		 *   "fr" and "br" are front and back right wheels
 		 */
 		try {
+			AutoLib.HardwareFactory mf = null;
+			final boolean debug = true;
+			if (debug)
+				mf = new AutoLib.TestHardwareFactory(this);
+			else
+				mf = new AutoLib.RealHardwareFactory(this);
+
+			// get the motors: depending on the factory we created above, these may be
+			// either dummy motors that just log data or real ones that drive the hardware
+			// assumed order is fr, br, fl, bl
 			mMotors = new DcMotor[4];
-			mMotors[0] = hardwareMap.dcMotor.get("fr");
-			(mMotors[1] = hardwareMap.dcMotor.get("fl")).setDirection(DcMotor.Direction.REVERSE);
-			mMotors[2] = hardwareMap.dcMotor.get("br");
-			(mMotors[3] = hardwareMap.dcMotor.get("bl")).setDirection(DcMotor.Direction.REVERSE);
+			mMotors[0] = mf.getDcMotor("fr");
+			mMotors[1] = mf.getDcMotor("br");
+			(mMotors[2] = mf.getDcMotor("fl")).setDirection(DcMotor.Direction.REVERSE);
+			(mMotors[3] = mf.getDcMotor("bl")).setDirection(DcMotor.Direction.REVERSE);
 
 			// get hardware gyro
-			mGyro = (ModernRoboticsI2cGyro) hardwareMap.gyroSensor.get("gyro");
+			mGyro = (ModernRoboticsI2cGyro) mf.getGyro("gyro");
 
 			// wrap gyro in an object that calibrates it and corrects its output
 			mCorrGyro = new SensorLib.CorrectedMRGyro(mGyro);

@@ -125,6 +125,7 @@ class GoToCryptoBoxGuideStep extends AutoLib.MotorGuideStep implements SetMark {
     OpMode mOpMode;
     int mCBColumn;                      // which Cryptobox column we're looking for
     Pattern mPattern;                   // compiled regexp pattern we'll use to find the pattern we're looking for
+    int mColumnOffset;                  // number of columns that have left the left-edge of the frame
 
     CameraLib.Filter mBlueFilter;       // filter to map cyan to blue
 
@@ -144,6 +145,7 @@ class GoToCryptoBoxGuideStep extends AutoLib.MotorGuideStep implements SetMark {
         mMotorSteps = null;     // this will be filled in by call from parent step
         mPower = power;
         mPrevColumns = null;
+        mColumnOffset = 0;
 
         // construct a default PID controller for correcting heading errors
         final float Kp = 0.2f;         // degree heading proportional term correction per degree of deviation
@@ -221,9 +223,20 @@ class GoToCryptoBoxGuideStep extends AutoLib.MotorGuideStep implements SetMark {
                 mOpMode.telemetry.addData("found ", "%s from %d to %d", mPattern.pattern(), h.start(), h.end());
             }
 
-            // if we found some columns, try to correct course using their positions in the image
             int nCol = columns.size();
-            if (nCol > mCBColumn) {
+
+            // try to handle case where a column has left the left-edge of the frame between the prev view and this one
+            if (mPrevColumns != null  &&  mPrevColumns.size()>0) {
+                // if the left-most column of the previous frame started at the left edge of the frame
+                // and the left edge of the current left-most column is to the right of the right edge of the left-most column of the previous frame
+                // then it's probably the case that the current left-most column is actually the second column of the previous frame.
+                if (mPrevColumns.get(0).start() == 0  &&  nCol > 0  && columns.get(0).start() > mPrevColumns.get(0).end()) {
+                    mColumnOffset++;
+                }
+            }
+
+            // if we found some columns, try to correct course using their positions in the image
+            if (nCol > mCBColumn-mColumnOffset) {
                 // to start, we need to see all four columns to know where we're going ...
                 // after that, we try to match up the columns visible in this view with those from the previous pass
                 // TBD
@@ -235,7 +248,7 @@ class GoToCryptoBoxGuideStep extends AutoLib.MotorGuideStep implements SetMark {
                 final float cameraOffset = 0.2f;        // e.g. camera is 0.2 x bin width to the right of block centerline
                 float cameraBinOffset = avgBinWidth * cameraOffset;
                 // camera target is center of target column + camera offset in image-string space
-                float cameraTarget = columns.get(mCBColumn).mid() + cameraBinOffset;
+                float cameraTarget = columns.get(mCBColumn-mColumnOffset).mid() + cameraBinOffset;
 
                 // the above computed target point should be in the middle of the image if we're on course -
                 // if not, correct our course to center it --
@@ -282,6 +295,11 @@ class GoToCryptoBoxGuideStep extends AutoLib.MotorGuideStep implements SetMark {
                 }
                 //return true;
             }
+
+            // save column hits for next pass to help handle columns leaving the field of view of
+            // the camera as we get close.
+            mPrevColumns = columns;
+            columns = null;
 
         }
 

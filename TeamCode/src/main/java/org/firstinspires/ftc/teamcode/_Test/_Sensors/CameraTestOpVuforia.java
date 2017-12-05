@@ -6,58 +6,47 @@
 
 package org.firstinspires.ftc.teamcode._Test._Sensors;
 
+import android.graphics.Bitmap;
+
 import com.qualcomm.robotcore.eventloop.opmode.Autonomous;
 import com.qualcomm.robotcore.eventloop.opmode.OpMode;
 
-import android.hardware.Camera;
-
 import org.firstinspires.ftc.teamcode._Libs.CameraLib;
+import org.firstinspires.ftc.teamcode._Libs.VuforiaLib_FTC2017;
 
 
-@Autonomous(name="Test: CameraLib Test 1", group ="Test")
+@Autonomous(name="Test: CameraLib Test Vuforia", group ="Test")
 //@Disabled
-public class CameraTestOp extends OpMode {
+public class CameraTestOpVuforia extends OpMode {
 
     int mLoopCount;
-    CameraLib.CameraAcquireFrames mCamAcqFr;
+    VuforiaLib_FTC2017 mVLib;
 
 
     // Constructor
-    public CameraTestOp() {
-        mCamAcqFr = new CameraLib.CameraAcquireFrames();
+    public CameraTestOpVuforia() {
     }
 
     @Override
     public void init() {
-        mLoopCount = 0;
+        mVLib = new VuforiaLib_FTC2017();
+        mVLib.init(this, null);     // pass it this OpMode (so it can do telemetry output) and use its license key for now
+    }
 
-        if (mCamAcqFr.init(2) == false)     // init camera at 2nd smallest size
-            telemetry.addData("error: ", "cannot initialize camera");
-
+    @Override public void start()
+    {
+        /** Start tracking the data sets we care about. */
+        mVLib.start();
     }
 
     public void loop() {
-        // post some debug data
-        telemetry.addData("loop count:", mLoopCount++);
-        telemetry.addData("version: ", "1.3");
 
-        // get most recent frame from camera (may be same as last time or null)
-        CameraLib.CameraImage frame = mCamAcqFr.loop();
-
-        // log debug info ...
-        if (frame != null) {
-
-            // process the current frame
-            // ... "move toward the light..."
-
-            // log data about the most current image to driver station every loop so it stays up long enough to read
+        // test image access through Vuforia
+        Bitmap b = mVLib.getBitmap(4);
+        if (b != null) {
+            CameraLib.CameraImage frame = new CameraLib.CameraImage(b);
             CameraLib.Size camSize = frame.cameraSize();
-            telemetry.addData("preview camera size", String.valueOf(camSize.width) + "x" + String.valueOf(camSize.height));
-            telemetry.addData("preview data size", frame.dataSize());
-            telemetry.addData("preview rgb(center)", String.format("%08X", frame.getPixel(camSize.width / 2, camSize.height / 2)));
-            telemetry.addData("frame number", mCamAcqFr.frameCount());
-
-            // log text representations of several significant scanlines
+            telemetry.addData("Size", String.valueOf(camSize.width) + "x" + String.valueOf(camSize.height));
             final int bandSize = 16;
             telemetry.addData("hue columns", frame.columnHue(bandSize));
             telemetry.addData("dom columns", frame.columnDomColor(bandSize));
@@ -74,7 +63,7 @@ public class CameraTestOp extends OpMode {
     }
 
     public void stop() {
-        mCamAcqFr.stop();
+        mVLib.stop();
     }
 
 }

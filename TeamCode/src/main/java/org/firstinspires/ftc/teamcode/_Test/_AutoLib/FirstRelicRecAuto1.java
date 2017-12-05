@@ -184,6 +184,9 @@ class GoToCryptoBoxGuideStep extends AutoLib.MotorGuideStep implements SetMark {
     public boolean loop() {
         super.loop();
 
+        final int minDoneCount = 5;      // require "done" test to succeed this many consecutive times
+        int doneCount = 0;
+
         // initialize previous-time on our first call -> dt will be zero on first call
         if (firstLoopCall()) {
             mPrevTime = mOpMode.getRuntime();           // use timer provided by OpMode
@@ -303,12 +306,19 @@ class GoToCryptoBoxGuideStep extends AutoLib.MotorGuideStep implements SetMark {
 
             // when we're really close ... i.e. when the bin width is really big ... we're done
             if (nCol > 1 && avgBinWidth > colHue.length()/2) {          // for now, when bin width > 1/2 FOV
-                // stop all the motors and return "done"
-                for (AutoLib.SetPower ms : mMotorSteps) {
-                    ms.setPower(0.0);
+                // require completion test to pass some min number of times in a row to believe it
+                if (++doneCount >= minDoneCount) {
+                    // stop all the motors and return "done"
+                    for (AutoLib.SetPower ms : mMotorSteps) {
+                        ms.setPower(0.0);
+                    }
+                    return true;
                 }
-                //return true;
             }
+            else
+                doneCount = 0;         // reset the "done" counter
+
+            mOpMode.telemetry.addData("data", "doneCount=%d", doneCount);
 
             // save column hits for next pass to help handle columns leaving the field of view of
             // the camera as we get close.

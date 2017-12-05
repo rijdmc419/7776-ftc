@@ -248,8 +248,10 @@ class GoToCryptoBoxGuideStep extends AutoLib.MotorGuideStep implements SetMark {
                 }
             }
 
+            mOpMode.telemetry.addData("data", "avgWidth= %f  mColOff=%d", avgBinWidth, mColumnOffset);
+
             // if we found some columns, try to correct course using their positions in the image
-            if (nCol > mCBColumn-mColumnOffset) {
+            if (mCBColumn >= mColumnOffset && nCol > mCBColumn-mColumnOffset) {
                 // to start, we need to see all four columns to know where we're going ...
                 // after that, we try to match up the columns visible in this view with those from the previous pass
                 // TBD
@@ -270,7 +272,7 @@ class GoToCryptoBoxGuideStep extends AutoLib.MotorGuideStep implements SetMark {
                 final float cameraHalfFOVdeg = 28.0f;       // half angle FOV is about 28 degrees
                 float angError = error * cameraHalfFOVdeg;
 
-                mOpMode.telemetry.addData("data", "avgWidth= %f  target=%f  angError=%f  mColOff=%d", avgBinWidth, cameraTarget, angError, mColumnOffset);
+                mOpMode.telemetry.addData("data", "target=%f  error=%f angError=%f", cameraTarget, error, angError);
 
                 // compute delta time since last call -- used for integration time of PID step
                 double time = mOpMode.getRuntime();
@@ -300,12 +302,12 @@ class GoToCryptoBoxGuideStep extends AutoLib.MotorGuideStep implements SetMark {
             }
 
             // when we're really close ... i.e. when the bin width is really big ... we're done
-            if (avgBinWidth > colHue.length()/2) {          // for now, when bin width > 1/2 FOV
+            if (nCol > 1 && avgBinWidth > colHue.length()/2) {          // for now, when bin width > 1/2 FOV
                 // stop all the motors and return "done"
                 for (AutoLib.SetPower ms : mMotorSteps) {
                     ms.setPower(0.0);
                 }
-                return true;
+                //return true;
             }
 
             // save column hits for next pass to help handle columns leaving the field of view of

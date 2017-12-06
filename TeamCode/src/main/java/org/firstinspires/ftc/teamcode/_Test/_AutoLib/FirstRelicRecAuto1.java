@@ -204,17 +204,17 @@ class GoToCryptoBoxGuideStep extends AutoLib.MotorGuideStep implements SetMark {
             // look for cryptobox columns
             // get unfiltered view of colors (hues) by full-image-height column bands
             final int bandSize = 8;
-            String colHue = frame.columnHue(bandSize);
+            String colString = frame.columnHue(bandSize);
 
             // log debug info ...
-            mOpMode.telemetry.addData("hue columns", colHue);
+            mOpMode.telemetry.addData("hue columns", colString);
 
             // look for occurrences of given pattern of column colors
             ArrayList<ColumnHit> columns = new ArrayList<ColumnHit>(8);       // array of column start/end indices
 
-            for (int i=0; i<colHue.length(); i++) {
+            for (int i=0; i<colString.length(); i++) {
                 // starting at position (i), look for the given pattern in the encoded (rgbcymw) scanline
-                Matcher m = mPattern.matcher(colHue.substring(i));
+                Matcher m = mPattern.matcher(colString.substring(i));
                 if (m.lookingAt()) {
                     // add start/end info about this hit to the array
                     columns.add(new ColumnHit(i+m.start(), i+m.end()-1));
@@ -235,18 +235,19 @@ class GoToCryptoBoxGuideStep extends AutoLib.MotorGuideStep implements SetMark {
             float avgBinWidth = nCol>1 ? (float)(columns.get(nCol-1).end() - columns.get(0).start()) / (float)(nCol-1) : 0;
 
             // try to handle case where a column has left (or entered) the left-edge of the frame between the prev view and this one
-            if (mPrevColumns != null  &&  mPrevColumns.size()>0  &&  nCol>0) {
+            if (mPrevColumns != null  &&  mPrevColumns.size()>0  &&  nCol>0  && avgBinWidth > 0) {
+
                 // if the left-most column of the previous frame started at the left edge of the frame
                 // and the left edge of the current left-most column is about a bin-width to the right of the right edge of the
                 // left-most column of the previous frame
                 // then it's probably the case that the current left-most column is actually the second column of the previous frame.
-                if (mPrevColumns.get(0).start() == 0  && columns.get(0).start() > (mPrevColumns.get(0).end()+0.5*avgBinWidth)) {
+                if (mPrevColumns.get(0).start() == 0 && columns.get(0).start() > (mPrevColumns.get(0).end()+0.5*avgBinWidth)) {
                     mColumnOffset++;
                 }
 
                 // if the left-most column of the previous frame was not near the left edge of the frame
                 // but now there is a column at the left edge, then one probably entered the frame.
-                if (mPrevColumns.get(0).start() > 0.5*avgBinWidth  &&  columns.get(0).start() == 0) {
+                if (mColumnOffset > 0 && mPrevColumns.get(0).start() > 0.5*avgBinWidth  &&  columns.get(0).start() == 0) {
                     mColumnOffset--;
                 }
             }
@@ -268,7 +269,7 @@ class GoToCryptoBoxGuideStep extends AutoLib.MotorGuideStep implements SetMark {
                 // the above computed target point should be in the middle of the image if we're on course -
                 // if not, correct our course to center it --
                 // compute fractional error = fraction of image offset of target from center = [-1 .. +1]
-                float error = (cameraTarget - (float)colHue.length()/2.0f) / ((float)colHue.length()/2.0f);
+                float error = (cameraTarget - (float)colString.length()/2.0f) / ((float)colString.length()/2.0f);
 
                 // compute motor correction from error through PID --
                 // for now, convert image-string error to angle and use standard "gyro" PID
@@ -305,7 +306,7 @@ class GoToCryptoBoxGuideStep extends AutoLib.MotorGuideStep implements SetMark {
             }
 
             // when we're really close ... i.e. when the bin width is really big ... we're done
-            if (nCol > 1 && avgBinWidth > colHue.length()/2) {          // for now, when bin width > 1/2 FOV
+            if (nCol > 1 && avgBinWidth > colString.length()/2) {          // for now, when bin width > 1/2 FOV
                 // require completion test to pass some min number of times in a row to believe it
                 if (++doneCount >= minDoneCount) {
                     // stop all the motors and return "done"

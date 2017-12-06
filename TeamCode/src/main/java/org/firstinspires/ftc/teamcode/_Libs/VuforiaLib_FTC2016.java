@@ -139,7 +139,7 @@ public class VuforiaLib_FTC2016 implements HeadingSensor, LocationSensor {
         blueTarget.setName("BlueTarget");  // Chips
         */
 
-        FTC_2016_17 = this.vuforia.loadTrackablesFromAsset("FTC_2016-17");
+        FTC_2016_17 = this.vuforia.loadTrackablesFromAsset("CryptoRedBlue1");
         VuforiaTrackable wheelsTarget = FTC_2016_17.get(0);
         wheelsTarget.setName("Wheels");
         VuforiaTrackable toolsTarget = FTC_2016_17.get(1);

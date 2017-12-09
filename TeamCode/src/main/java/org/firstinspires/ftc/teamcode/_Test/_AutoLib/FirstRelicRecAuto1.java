@@ -197,13 +197,13 @@ class GoToCryptoBoxGuideStep extends AutoLib.MotorGuideStep implements SetMark {
         // get most recent frame from camera (through Vuforia)
         //RectF rect = new RectF(0,0.25f,1f,0.75f);      // middle half of the image should be enough
         //Bitmap bitmap = mVLib.getBitmap(rect, 4);                      // get cropped, downsampled image from Vuforia
-        Bitmap bitmap = mVLib.getBitmap(4);                      // get uncropped, downsampled image from Vuforia
+        Bitmap bitmap = mVLib.getBitmap(8);                      // get uncropped, downsampled image from Vuforia
         CameraLib.CameraImage frame = new CameraLib.CameraImage(bitmap);       // .. and wrap it in a CameraImage
 
         if (bitmap != null && frame != null) {
             // look for cryptobox columns
             // get unfiltered view of colors (hues) by full-image-height column bands
-            final int bandSize = 8;
+            final int bandSize = 4;
             String colString = frame.columnHue(bandSize);
 
             // log debug info ...

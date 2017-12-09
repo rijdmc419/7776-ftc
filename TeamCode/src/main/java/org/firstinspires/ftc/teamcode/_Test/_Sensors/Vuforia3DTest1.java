@@ -60,7 +60,8 @@ public class Vuforia3DTest1 extends OpMode {
 
     @Override public void init() {
         mVLib = new VuforiaLib_3D();
-        mVLib.init(this, null, "sharpener2_OT");
+        String names[] = { "red2", "red1", "blue1", "blue2" };
+        mVLib.init(this, null, "CryptoRedBlue1", names);
         // pass it this OpMode (so it can do telemetry output) and use its license key for now
     }
 
@@ -74,17 +75,17 @@ public class Vuforia3DTest1 extends OpMode {
     {
         mVLib.loop();       // update location info and do debug telemetry
 
-        telemetry.addData("Database", mVLib.getName());
+        telemetry.addData("Visible", mVLib.getName());
 
         OpenGLMatrix lastLocation = mVLib.getLastLocation();
         if (mVLib.haveLocation())
-            telemetry.addData("Position:", VuforiaLib_3D.formatPosition(lastLocation));
+            telemetry.addData("Position", VuforiaLib_3D.formatPosition(lastLocation));
         else
-            telemetry.addData("Position:", "Unknown");
+            telemetry.addData("Position", "Unknown");
         if (mVLib.haveHeading())
-            telemetry.addData("Orientation:", VuforiaLib_3D.formatOrientation(lastLocation));
+            telemetry.addData("Orientation", VuforiaLib_3D.formatOrientation(lastLocation));
         else
-            telemetry.addData("Orientation:", "Unknown");
+            telemetry.addData("Orientation", "Unknown");
 
     }
 

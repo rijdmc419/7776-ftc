@@ -99,18 +99,16 @@ class myVuforiaLocalizerImpl2 extends VuforiaLocalizerImpl
 public class VuforiaLib_3D implements HeadingSensor, LocationSensor {
 
     myVuforiaLocalizerImpl2 vuforia;
-    VuforiaTrackables relicTrackables = null;
-    VuforiaTrackable relicTemplate;
-
-    RelicRecoveryVuMark mVuMark = null;
+    VuforiaTrackables mTrackables = null;
     OpenGLMatrix mLastLocation = null;
+    VuforiaTrackable mLastVisible = null;
 
     OpMode mOpMode;
 
     BlockingQueue<VuforiaLocalizer.CloseableFrame> mFrameQueue;
     VuforiaLocalizer.CloseableFrame mCF;
 
-    public void init(OpMode opMode, String licenseKey, String database) {
+    public void init(OpMode opMode, String licenseKey, String database, String names[]) {
 
         // remember this so we can do telemetry output
         mOpMode = opMode;
@@ -127,9 +125,23 @@ public class VuforiaLib_3D implements HeadingSensor, LocationSensor {
          * sets are stored in the 'assets' part of our application (you'll see them in the Android
          * Studio 'Project' view over there on the left of the screen).
          */
-        relicTrackables = this.vuforia.loadTrackablesFromAsset(database);
-        relicTemplate = relicTrackables.get(0);
-        relicTemplate.setName(database); // can help in debugging; otherwise not necessary
+        mTrackables = this.vuforia.loadTrackablesFromAsset(database);
+        int i = 0;
+        for (VuforiaTrackable t : mTrackables) {
+            mTrackables.get(i).setName(names[i]);
+            if (i < names.length-1)
+                i++;
+        }
+
+        // assign an arbitrary field transformation to all Trackables so we can get position info relative to them
+        for (VuforiaTrackable t : mTrackables) {
+            OpenGLMatrix wheelsTargetLocationOnField = OpenGLMatrix
+                    .translation(0, 0, 0)
+                    .multiplied(Orientation.getRotationMatrix(
+                            AxesReference.EXTRINSIC, AxesOrder.XZX,
+                            AngleUnit.DEGREES, 90, 0, 0));
+            t.setLocation(wheelsTargetLocationOnField);
+        }
 
         /**
          * Create a transformation matrix describing where the phone is on the robot. Here, we
@@ -153,7 +165,9 @@ public class VuforiaLib_3D implements HeadingSensor, LocationSensor {
          * listener is a {@link VuforiaTrackableDefaultListener} and can so safely cast because
          * we have not ourselves installed a listener of a different type.
          */
-        ((VuforiaTrackableDefaultListener) relicTemplate.getListener()).setPhoneInformation(phoneLocationOnRobot, parameters.cameraDirection);
+        for (VuforiaTrackable t : mTrackables) {
+            ((VuforiaTrackableDefaultListener)t.getListener()).setPhoneInformation(phoneLocationOnRobot, parameters.cameraDirection);
+        }
 
         // get access to video frames so we can do other processing like looking for red/blue beacons
         Vuforia.setFrameFormat(PIXEL_FORMAT.RGB888, true); //enables RGB format for the image
@@ -166,32 +180,44 @@ public class VuforiaLib_3D implements HeadingSensor, LocationSensor {
     public void start()
     {
         /** Start tracking the data sets we care about. */
-        relicTrackables.activate();
+        mTrackables.activate();
     }
 
     public void loop()
     {
-        /**
-         * See if any of the instances of {@link relicTemplate} are currently visible.
-         * {@link RelicRecoveryVuMark} is an enum which can have the following values:
-         * UNKNOWN, LEFT, CENTER, and RIGHT. When a VuMark is visible, something other than
-         * UNKNOWN will be returned by {@link RelicRecoveryVuMark#from(VuforiaTrackable)}.
-         */
-        mLastLocation = ((VuforiaTrackableDefaultListener)relicTemplate.getListener()).getPose();
+        mLastLocation = null;    // reset each time so we can tell if we currently have any target visible
+
+        for (VuforiaTrackable t : mTrackables) {
+
+            if (((VuforiaTrackableDefaultListener)t.getListener()).isVisible())
+                mLastVisible = t;
+
+            /**
+             * getUpdatedRobotLocation() will return null if no new information is available since
+             * the last time that call was made, or if the trackable is not currently visible.
+             * getRobotLocation() will return null if the trackable is not currently visible.
+             */
+            OpenGLMatrix robotLocationTransform = ((VuforiaTrackableDefaultListener)t.getListener()).getRobotLocation();
+            if (robotLocationTransform != null) {
+                mLastLocation = robotLocationTransform;
+            }
+        }
     }
 
 
     public void stop()
     {
         /** Stop tracking the data sets we care about. */
-        relicTrackables.deactivate();
+        mTrackables.deactivate();
 
         // close down Vuforia NOW so other code can use the camera
         vuforia._close();
     }
 
     // return name of last detected Trackable
-    public String getName() { return relicTemplate.getName(); }
+    public String getName() {
+        return mLastVisible != null ? mLastVisible.getName() : "none";
+    }
 
     // return lastLocation matrix (may be null)
     public OpenGLMatrix getLastLocation()

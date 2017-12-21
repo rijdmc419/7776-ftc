@@ -722,8 +722,8 @@ public class AutoLib {
     // while the front vs. back power is adjusted to translate in the desired absolute direction.
     static public class SquirrelyGyroGuideStep extends AutoLib.MotorGuideStep {
         private float mPower;                               // basic power setting of all 4 motors -- adjusted for steering along path
-        private float mDirection;                           // relative direction along which the robot should move (0 ahead; positive CCW)
-        private float mHeading;                             // orientation the robot should maintain while moving
+        private float mDirection;                           // absolute direction along which the robot should move (0 ahead; positive CCW)
+        private float mHeading;                             // absolute orientation the robot should maintain while moving
         private OpMode mOpMode;                             // needed so we can log output (may be null)
         private HeadingSensor mGyro;                        // sensor to use for heading information (e.g. Gyro or Vuforia)
         private SensorLib.PID mPid;                         // proportional–integral–derivative controller (PID controller)
@@ -788,8 +788,8 @@ public class AutoLib {
             // feed error through PID to get motor power value for heading correction
             float hdCorr = mPid.loop(error, (float) dt);
 
-            // relative direction we want to move is difference between given absolute direction and orientation
-            float relDir = SensorLib.Utils.wrapAngle(mDirection - mHeading);
+            // relative direction we want to move is difference between requested absolute direction and CURRENT orientation
+            float relDir = SensorLib.Utils.wrapAngle(mDirection - heading);
 
             // calculate relative front/back motor powers for fancy wheels to move us in requested relative direction
             AutoLib.MotorPowers mp = AutoLib.GetSquirrelyWheelMotorPowers(relDir);

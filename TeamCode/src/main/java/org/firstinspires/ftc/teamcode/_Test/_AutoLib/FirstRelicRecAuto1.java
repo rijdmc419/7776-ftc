@@ -215,6 +215,11 @@ class GoToCryptoBoxGuideStep extends AutoLib.MotorGuideStep implements SetMark {
             // log debug info ...
             mOpMode.telemetry.addData("hue columns", colString);
 
+            // if string is reversed because camera is upside down, fix it
+            final boolean bReverse = false;
+            if (bReverse)
+                colString = new StringBuilder(colString).reverse().toString();
+
             // look for occurrences of given pattern of column colors
             ArrayList<ColumnHit> columns = new ArrayList<ColumnHit>(8);       // array of column start/end indices
 

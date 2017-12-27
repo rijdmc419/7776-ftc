@@ -331,16 +331,26 @@ public class VuforiaLib_FTC2017 implements HeadingSensor, LocationSensor {
             Image image = frame.getImage(img);
             ByteBuffer byteBuffer = image.getPixels();
 
-            int h = (int)(image.getHeight()*rect.height());    // height of cropped src data
-            int w = (int)(image.getWidth()*rect.width());      // width of cropped src data
+            int h = image.getHeight();    // height of src data
+            int w = image.getWidth();     // width of src data
 
             // convert the data to a Bitmap
             byteBuffer.rewind();
             Bitmap bitmap = Bitmap.createBitmap(w, h, Bitmap.Config.RGB_565);
             bitmap.copyPixelsFromBuffer(byteBuffer);
 
-            // scale the result bitmap by the "sample" factor
-            Bitmap bitmapScaled = Bitmap.createScaledBitmap(bitmap, w/sample, h/sample, true);
+            // crop the Bitmap if requested
+            Bitmap bitmapCropped = bitmap;
+            int ch = Math.round(h*rect.height());    // height of cropped src data
+            int cw = Math.round(w*rect.width());     // width of cropped src data
+            if (ch < h || cw < w) {
+                bitmapCropped = Bitmap.createBitmap(bitmap,
+                        Math.max(0, Math.round(w*rect.left)), Math.max(0, Math.round(h*rect.top)), cw, ch);
+                h = ch; w = cw;
+            }
+
+            // scale the (possibly cropped) result bitmap by the "sample" factor
+            Bitmap bitmapScaled = Bitmap.createScaledBitmap(bitmapCropped, w/sample, h/sample, true);
 
             frame.close();
 

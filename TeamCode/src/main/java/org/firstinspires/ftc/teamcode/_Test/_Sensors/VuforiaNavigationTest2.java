@@ -33,6 +33,7 @@ THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 package org.firstinspires.ftc.teamcode._Test._Sensors;
 
 import android.graphics.Bitmap;
+import android.graphics.RectF;
 
 import com.qualcomm.robotcore.eventloop.opmode.Autonomous;
 import com.qualcomm.robotcore.eventloop.opmode.OpMode;
@@ -59,6 +60,7 @@ import static org.firstinspires.ftc.teamcode._Libs.VuforiaLib_FTC2017.formatPosi
 public class VuforiaNavigationTest2 extends OpMode {
 
     VuforiaLib_FTC2017 mVLib;
+    int mLoopCount;
 
     @Override public void init() {
         /**
@@ -72,6 +74,8 @@ public class VuforiaNavigationTest2 extends OpMode {
     {
         /** Start tracking the data sets we care about. */
         mVLib.start();
+
+        mLoopCount = 0;
     }
 
     @Override public void loop()
@@ -109,17 +113,16 @@ public class VuforiaNavigationTest2 extends OpMode {
         }
 
         // test image access through Vuforia
-        Bitmap b = mVLib.getBitmap(4);
+        // look at the columns of the top half or bottom half of the image alternately
+        boolean top = (mLoopCount++/20)%2 == 0;
+        RectF crop = (top) ? new RectF(0, 0, 1f, 0.5f) : new RectF(0, 0.5f, 1f, 1f);
+        Bitmap b = mVLib.getBitmap(crop, 4);
         if (b != null) {
             CameraLib.CameraImage frame = new CameraLib.CameraImage(b);
             CameraLib.Size camSize = frame.cameraSize();
             telemetry.addData("Size", String.valueOf(camSize.width) + "x" + String.valueOf(camSize.height));
-            final int bandSize = 16;
-            telemetry.addData("hue columns", frame.columnHue(bandSize));
-            //telemetry.addData("dom columns", frame.columnDom(bandSize));
-            //telemetry.addData("hue a(1/3)", frame.scanlineHue(camSize.height / 3, bandSize));
-            //telemetry.addData("hue b(1/2)", frame.scanlineHue(camSize.height / 2, bandSize));
-            //telemetry.addData("hue c(2/3)", frame.scanlineHue(2*camSize.height / 3, bandSize));
+            final int bandSize = 8;
+            telemetry.addData(top ? "top hue   " : "bottom hue", frame.columnHue(bandSize));
         }
 
     }

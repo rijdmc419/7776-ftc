@@ -195,10 +195,10 @@ class GoToCryptoBoxGuideStep extends AutoLib.MotorGuideStep implements SetMark {
         mOpMode.telemetry.addData("VuMark", "%s found", mVuMarkString);
 
         // get most recent frame from camera (through Vuforia)
-        //RectF rect = new RectF(0,0.25f,1f,0.75f);      // middle half of the image should be enough
-        //Bitmap bitmap = mVLib.getBitmap(rect, 4);                      // get cropped, downsampled image from Vuforia
+        RectF rect = new RectF(0,0,1f,0.67f);          // top 2/3 of the image should be enough and avoids floor junk
+        Bitmap bitmap = mVLib.getBitmap(rect, 4);                      // get cropped, downsampled image from Vuforia
 
-        Bitmap bitmap = mVLib.getBitmap(4);                      // get uncropped, downsampled image from Vuforia
+        //Bitmap bitmap = mVLib.getBitmap(4);                      // get uncropped, downsampled image from Vuforia
 
         if (bitmap != null) {
 
@@ -216,7 +216,7 @@ class GoToCryptoBoxGuideStep extends AutoLib.MotorGuideStep implements SetMark {
             mOpMode.telemetry.addData("hue columns", colString);
 
             // if string is reversed because camera is upside down, fix it
-            final boolean bReverse = false;
+            final boolean bReverse = true;
             if (bReverse)
                 colString = new StringBuilder(colString).reverse().toString();
 

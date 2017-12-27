@@ -179,7 +179,7 @@ public class VuforiaLib_FTC2017 implements HeadingSensor, LocationSensor {
         ((VuforiaTrackableDefaultListener) relicTemplate.getListener()).setPhoneInformation(phoneLocationOnRobot, parameters.cameraDirection);
 
         // get access to video frames so we can do other processing like looking for red/blue beacons
-        Vuforia.setFrameFormat(PIXEL_FORMAT.RGB888, true); //enables RGB format for the image
+        Vuforia.setFrameFormat(PIXEL_FORMAT.RGB565, true); //enables RGB format for the image
         vuforia.setFrameQueueCapacity(1);
         mFrameQueue = vuforia.getFrameQueue();
         mCF = null;
@@ -322,55 +322,29 @@ public class VuforiaLib_FTC2017 implements HeadingSensor, LocationSensor {
             int img = 0;
             for (; img < frame.getNumImages(); img++) {
                 //telemetry.addData("Image format " + img, frame.getImage(img).getFormat());
-                if (frame.getImage(img).getFormat() == PIXEL_FORMAT.RGB888) break;
+                if (frame.getImage(img).getFormat() == PIXEL_FORMAT.RGB565) break;
             }
 
             if (img == frame.getNumImages()) throw new IllegalArgumentException("Incorrect format");
 
-            // get the Image with the correct (RGB888) format and extract its data
+            // get the Image with the correct format and extract its data
             Image image = frame.getImage(img);
-            ByteBuffer byteBuffer3 = image.getPixels();
+            ByteBuffer byteBuffer = image.getPixels();
 
-            // expand RGB888 to ARGB_8888 with optional cropping and down-sampling
-            int h3 = (int)(image.getHeight()*rect.height());    // height of cropped src data
-            int w3 = (int)(image.getWidth()*rect.width());      // width of cropped src data
-            int x3 = (int)(image.getWidth()*rect.left);         // column at left of crop rectangle
-            int y3 = (int)(image.getHeight()*rect.top);         // scanline at top of crop rectangle
-            int s3 = image.getStride();                         // actual number of bytes per src image scanline
-            int h4 = h3/sample;                                 // height of cropped and downsampled output image
-            int w4 = w3/sample;                                 // width of cropped and downsampled output image
-
-            // get the RGB888 data from the image ByteBuffer
-            byte[] bytes3 = new byte[byteBuffer3.limit()];
-            byteBuffer3.rewind();
-            byteBuffer3.get(bytes3, 0, bytes3.length);
-
-            // make a byte buffer for down-sampled ARGB_8888 data
-            byte[] bytes4 = new byte[4*w4*h4];
-            int j3 = s3*y3+3*x3;        // source index at upper-left corner of crop rectangle (i.e. at x3,y3)
-            int j4 = 0;                 // destination index
-            for (int y=0; y<h4; y++) {          // for each output scanline ...
-                int jsrc = j3;
-                for (int x=0; x<w4; x++) {      //   for each output pixel ...
-                    bytes4[j4++] = bytes3[jsrc+0];      // R
-                    bytes4[j4++] = bytes3[jsrc+1];      // G
-                    bytes4[j4++] = bytes3[jsrc+2];      // B
-                    bytes4[j4++] = -128;                // A
-                    jsrc += 3*sample;
-                }
-                j3 += s3*sample;   // move src pointer to start of next scanline
-            }
-
-            ByteBuffer byteBuffer4 = ByteBuffer.wrap(bytes4);
+            int h = (int)(image.getHeight()*rect.height());    // height of cropped src data
+            int w = (int)(image.getWidth()*rect.width());      // width of cropped src data
 
             // convert the data to a Bitmap
-            byteBuffer4.rewind();
-            Bitmap bitmap = Bitmap.createBitmap(w4, h4, Bitmap.Config.ARGB_8888);
-            bitmap.copyPixelsFromBuffer(byteBuffer4);
+            byteBuffer.rewind();
+            Bitmap bitmap = Bitmap.createBitmap(w, h, Bitmap.Config.RGB_565);
+            bitmap.copyPixelsFromBuffer(byteBuffer);
+
+            // scale the result bitmap by the "sample" factor
+            Bitmap bitmapScaled = Bitmap.createScaledBitmap(bitmap, w/sample, h/sample, true);
 
             frame.close();
 
-            return bitmap;
+            return bitmapScaled;
         }
         catch (Exception e) {}
 

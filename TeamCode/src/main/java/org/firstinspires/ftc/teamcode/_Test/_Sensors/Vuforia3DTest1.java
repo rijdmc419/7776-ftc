@@ -33,6 +33,7 @@ THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 package org.firstinspires.ftc.teamcode._Test._Sensors;
 
 import android.graphics.Bitmap;
+import android.graphics.RectF;
 
 import com.qualcomm.robotcore.eventloop.opmode.Autonomous;
 import com.qualcomm.robotcore.eventloop.opmode.OpMode;
@@ -86,6 +87,17 @@ public class Vuforia3DTest1 extends OpMode {
             telemetry.addData("Orientation", VuforiaLib_3D.formatOrientation(lastLocation));
         else
             telemetry.addData("Orientation", "Unknown");
+
+        // test image access through Vuforia
+        RectF crop = new RectF(0.1f, 0.1f, 0.9f, 0.9f);
+        Bitmap b = mVLib.getBitmap(crop, 4);
+        if (b != null) {
+            CameraLib.CameraImage frame = new CameraLib.CameraImage(b);
+            CameraLib.Size camSize = frame.cameraSize();
+            telemetry.addData("Size", String.valueOf(camSize.width) + "x" + String.valueOf(camSize.height));
+            final int bandSize = 4;
+            telemetry.addData("hue   ", frame.columnHue(bandSize));
+        }
 
     }
 

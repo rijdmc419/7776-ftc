@@ -33,6 +33,7 @@ THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 package org.firstinspires.ftc.teamcode._Test._Sensors;
 
 import com.qualcomm.robotcore.eventloop.opmode.Autonomous;
+import com.qualcomm.robotcore.eventloop.opmode.Disabled;
 import com.qualcomm.robotcore.eventloop.opmode.OpMode;
 import com.vuforia.Image;
 
@@ -43,12 +44,12 @@ import org.firstinspires.ftc.teamcode._Libs.VuforiaLib_FTC2016;
 import java.nio.ByteBuffer;
 
 /**
- * This OpMode illustrates the basics of using the VuforiaLib_FTC2016 library to determine
+ * This OpMode illustrates the basics of using the VuforiaLib_FTC2017 library to determine
  * positioning and orientation of robot on the FTC field.
  */
 
 @Autonomous(name="Test: Vuforia Navigation Test 1", group ="Test")
-//@Disabled
+@Disabled
 public class VuforiaNavigationTest1 extends OpMode {
 
     VuforiaLib_FTC2016 mVLib;
@@ -70,29 +71,6 @@ public class VuforiaNavigationTest1 extends OpMode {
     @Override public void loop()
     {
         mVLib.loop(true);       // update location info and do debug telemetry
-
-        // test image access through Vuforia
-        //
-        VuforiaLocalizer.CloseableFrame f = mVLib.getFrame();
-        if (f != null)
-        {
-            long n = f.getNumImages();
-            telemetry.addData("frame:", "numImages=%3d", n);
-
-            for (int i=0; i<n; i++) {
-                Image image = f.getImage(i);
-                if (image != null)
-                {
-                    int w = image.getWidth();
-                    int h = image.getHeight();
-                    int fmt = image.getFormat();
-                    ByteBuffer buf = image.getPixels();
-                    telemetry.addData("image["+i+"]:", "w=%3d h=%3d fmt=%2d stride=%5d", w, h, fmt, image.getStride());
-                }
-            }
-        }
-
-        mVLib.releaseFrame(); //
     }
 
     @Override public void stop()

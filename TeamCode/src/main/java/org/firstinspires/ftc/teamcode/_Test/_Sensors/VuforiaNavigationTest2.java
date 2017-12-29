@@ -113,14 +113,13 @@ public class VuforiaNavigationTest2 extends OpMode {
         }
 
         // test image access through Vuforia
-        // look at the columns of the top half or bottom half of the image alternately
         Bitmap b = mVLib.getBitmap(4);
         if (b != null) {
             CameraLib.CameraImage frame = new CameraLib.CameraImage(b);
             CameraLib.Size camSize = frame.cameraSize();
             telemetry.addData("Size", String.valueOf(camSize.width) + "x" + String.valueOf(camSize.height));
 
-            // sample some pixels in both orientations
+            // sample some blocks of pixels in both phone orientations
             // camera left
             frame.setCameraRight(false);
             telemetry.addData("camera left", "upper left %s right %s",

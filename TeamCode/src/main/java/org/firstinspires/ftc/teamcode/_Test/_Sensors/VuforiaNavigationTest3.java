@@ -32,6 +32,7 @@ THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 package org.firstinspires.ftc.teamcode._Test._Sensors;
 
+import android.graphics.Bitmap;
 import android.hardware.Camera;
 
 import com.qualcomm.robotcore.eventloop.opmode.Autonomous;
@@ -43,9 +44,8 @@ import org.firstinspires.ftc.teamcode._Libs.CameraLib;
 import org.firstinspires.ftc.teamcode._Libs.VuforiaLib_FTC2017;
 
 /**
- * This OpMode illustrates the basics of using the VuforiaLib_FTC2017 library to just determine
- * which column of the shelves to fill first and then shutting down Vuforia and starting up CameraLib
- * to let us use simple scanline searches to find the red and blue jewels.
+ * This OpMode illustrates the basics of using the VuforiaLib_FTC2017 library to determine
+ * which column of the shelves to fill first and then use simple scanline searches to find the red and blue jewels.
  */
 
 @Autonomous(name="Test: Vuforia-CameraLib Test 3", group ="Test")
@@ -53,8 +53,6 @@ import org.firstinspires.ftc.teamcode._Libs.VuforiaLib_FTC2017;
 public class VuforiaNavigationTest3 extends OpMode {
 
     VuforiaLib_FTC2017 mVLib;
-    CameraLib.CameraAcquireFrames mCamAcqFr;
-
     String mVuMarkString;
 
     enum Phase { eViewforia, eCameraLib, eError };
@@ -67,7 +65,7 @@ public class VuforiaNavigationTest3 extends OpMode {
         mVLib = new VuforiaLib_FTC2017();
         mVLib.init(this, null);     // pass it this OpMode (so it can do telemetry output) and use its license key for now
 
-        mPhase = Phase.eViewforia;     // Vuforia phase
+        mPhase = Phase.eViewforia;     // Vuforia recognition phase
         mVuMarkString = "none";
     }
 
@@ -87,31 +85,32 @@ public class VuforiaNavigationTest3 extends OpMode {
                 // Found an instance of the template -- remember which
                 mVuMarkString = vuMark.toString();
 
-                // shut down Vuforia - we're done with it
-                mVLib.stop();
-                //mVLib = null;
-
-                // start normal camera image acquisition
-                mCamAcqFr = new CameraLib.CameraAcquireFrames();
-                if (mCamAcqFr.init(2) == false)     // init camera at 2nd smallest size
-                    mPhase = Phase.eError;
-                else
-                    mPhase = Phase.eCameraLib;
+                mPhase = Phase.eCameraLib;
             }
         }
         else
         if (mPhase == Phase.eCameraLib){
-            // get most recent frame from camera (may be same as last time or null)
-            CameraLib.CameraImage frame = mCamAcqFr.loop();
-
-            // log debug info ...
-            if (frame != null) {
-                // log text representations of several significant scanlines
+            // get most recent frame from camera
+            Bitmap b = mVLib.getBitmap(4);
+            if (b != null) {
+                CameraLib.CameraImage frame = new CameraLib.CameraImage(b);
                 CameraLib.Size camSize = frame.cameraSize();
-                final int bandSize = 6;
-                telemetry.addData("hue a(1/3): ", frame.scanlineHue(camSize.height / 3, bandSize));
-                telemetry.addData("hue b(1/2): ", frame.scanlineHue(camSize.height / 2, bandSize));
-                telemetry.addData("hue c(2/3): ", frame.scanlineHue(2 * camSize.height / 3, bandSize));
+                if (frame != null) {
+                    // log text representations of several significant scanlines
+                    final int bandSize = 8;
+
+                    frame.setCameraRight(false);
+                    telemetry.addData("camera", "left");
+                    telemetry.addData("hue a(1/3): ", frame.scanlineHue(camSize.height / 3, bandSize));
+                    telemetry.addData("hue b(1/2): ", frame.scanlineHue(camSize.height / 2, bandSize));
+                    telemetry.addData("hue c(2/3): ", frame.scanlineHue(2 * camSize.height / 3, bandSize));
+
+                    frame.setCameraRight(true);
+                    telemetry.addData("camera", "right");
+                    telemetry.addData("hue a(1/3): ", frame.scanlineHue(camSize.height / 3, bandSize));
+                    telemetry.addData("hue b(1/2): ", frame.scanlineHue(camSize.height / 2, bandSize));
+                    telemetry.addData("hue c(2/3): ", frame.scanlineHue(2 * camSize.height / 3, bandSize));
+                }
             }
         }
         else
@@ -124,10 +123,8 @@ public class VuforiaNavigationTest3 extends OpMode {
 
     @Override public void stop()
     {
-        if (mPhase == Phase.eViewforia)
+        if (mPhase == Phase.eViewforia  ||  mPhase == Phase.eCameraLib)
             mVLib.stop();
-        else
-            mCamAcqFr.stop();
     }
 
 }

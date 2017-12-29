@@ -144,6 +144,9 @@ class GoToCryptoBoxGuideStep extends AutoLib.MotorGuideStep implements SetMark {
     ArrayList<AutoLib.SetPower> mMotorSteps;   // the motor steps we're guiding - assumed order is right ... left ...
     float mPower;                      // base power setting for motors
 
+    final int minDoneCount = 5;      // require "done" test to succeed this many consecutive times
+    int mDoneCount;
+
     public GoToCryptoBoxGuideStep(OpMode opMode, VuforiaLib_FTC2017 VLib, String pattern, float power) {
         mOpMode = opMode;
         mCBColumn = 1;     // if we never get a cryptobox directive from Vuforia, go for the first bin
@@ -154,9 +157,10 @@ class GoToCryptoBoxGuideStep extends AutoLib.MotorGuideStep implements SetMark {
         mPower = power;
         mPrevColumns = null;
         mColumnOffset = 0;
-
+        mDoneCount = 0;
+        
         // construct a default PID controller for correcting heading errors
-        final float Kp = 0.2f;         // degree heading proportional term correction per degree of deviation
+        final float Kp = 0.02f;        // degree heading proportional term correction per degree of deviation
         final float Ki = 0.0f;         // ... integrator term
         final float Kd = 0.0f;         // ... derivative term
         final float KiCutoff = 3.0f;   // maximum angle error for which we update integrator
@@ -189,9 +193,6 @@ class GoToCryptoBoxGuideStep extends AutoLib.MotorGuideStep implements SetMark {
 
     public boolean loop() {
         super.loop();
-
-        final int minDoneCount = 5;      // require "done" test to succeed this many consecutive times
-        int doneCount = 0;
 
         // initialize previous-time on our first call -> dt will be zero on first call
         if (firstLoopCall()) {
@@ -269,6 +270,16 @@ class GoToCryptoBoxGuideStep extends AutoLib.MotorGuideStep implements SetMark {
 
             mOpMode.telemetry.addData("data", "avgWidth= %f  mColOff=%d", avgBinWidth, mColumnOffset);
 
+            final float tanCameraHalfFOV = 28.0f/50.0f;       // horizontal half angle FOV of S5 camera is atan(28/50) or about 29.25 degrees
+
+            // estimate distance from the cryptoboxes
+            float normBW = avgBinWidth*2 / colString.length();                   // avg bin width in normalized camera space (-1 .. +1)
+            float distance = -1;                                            // distance to cryptobox in inches --- -1 means "don't know"
+            if (normBW > 0){
+                distance = 7.5f / (normBW * tanCameraHalfFOV);                    // distance to bins given they are 7.5" wide;
+                mOpMode.telemetry.addData("distance (in)", distance);
+            }
+
             // if we found some columns, try to correct course using their positions in the image
             if (mCBColumn >= mColumnOffset && nCol > mCBColumn-mColumnOffset) {
                 // to start, we need to see all four columns to know where we're going ...
@@ -287,8 +298,7 @@ class GoToCryptoBoxGuideStep extends AutoLib.MotorGuideStep implements SetMark {
 
                 // compute motor correction from error through PID --
                 // for now, convert image-string error to angle and use standard "gyro" PID
-                final float cameraHalfFOVdeg = 28.0f;       // half angle FOV is about 28 degrees
-                float angError = error * cameraHalfFOVdeg;
+                double angError = Math.atan(error * tanCameraHalfFOV) * 180.0/Math.PI;
 
                 mOpMode.telemetry.addData("data", "target=%f  error=%f angError=%f", cameraTarget, error, angError);
 
@@ -298,7 +308,7 @@ class GoToCryptoBoxGuideStep extends AutoLib.MotorGuideStep implements SetMark {
                 mPrevTime = time;
 
                 // feed error through PID to get motor power correction value
-                float correction = -mPid.loop(error, (float)dt);
+                float correction = -mPid.loop((float)angError, (float)dt);
 
                 // compute new right/left motor powers
                 float rightPower = mPower + correction;
@@ -319,10 +329,11 @@ class GoToCryptoBoxGuideStep extends AutoLib.MotorGuideStep implements SetMark {
                 mOpMode.telemetry.addData("motors", "left=%f right=%f", leftPower, rightPower);
             }
 
-            // when we're really close ... i.e. when the bin width is really big ... we're done
-            if (nCol > 1 && avgBinWidth > colString.length()/2) {          // for now, when bin width > 1/2 FOV
+            // when we're really close ...
+            if (distance > 0  &&  distance < 12) {          // for now, stop at 12" from bins
                 // require completion test to pass some min number of times in a row to believe it
-                if (++doneCount >= minDoneCount) {
+                mDoneCount++;
+                if (mDoneCount >= minDoneCount) {
                     // stop all the motors and return "done"
                     for (AutoLib.SetPower ms : mMotorSteps) {
                         ms.setPower(0.0);
@@ -331,9 +342,9 @@ class GoToCryptoBoxGuideStep extends AutoLib.MotorGuideStep implements SetMark {
                 }
             }
             else
-                doneCount = 0;         // reset the "done" counter
+                mDoneCount = 0;         // reset the "done" counter
 
-            mOpMode.telemetry.addData("data", "doneCount=%d", doneCount);
+            mOpMode.telemetry.addData("data", "doneCount=%d", mDoneCount);
 
             // save column hits for next pass to help handle columns leaving the field of view of
             // the camera as we get close.

@@ -114,15 +114,29 @@ public class VuforiaNavigationTest2 extends OpMode {
 
         // test image access through Vuforia
         // look at the columns of the top half or bottom half of the image alternately
-        boolean top = (mLoopCount++/20)%2 == 0;
-        RectF crop = (top) ? new RectF(0, 0, 1f, 0.5f) : new RectF(0, 0.5f, 1f, 1f);
-        Bitmap b = mVLib.getBitmap(crop, 4);
+        Bitmap b = mVLib.getBitmap(4);
         if (b != null) {
             CameraLib.CameraImage frame = new CameraLib.CameraImage(b);
             CameraLib.Size camSize = frame.cameraSize();
             telemetry.addData("Size", String.valueOf(camSize.width) + "x" + String.valueOf(camSize.height));
-            final int bandSize = 8;
-            telemetry.addData(top ? "top hue   " : "bottom hue", frame.columnHue(bandSize));
+
+            // sample some pixels in both orientations
+            // camera left
+            frame.setCameraRight(false);
+            telemetry.addData("camera left", "upper left %s right %s",
+                    CameraLib.Pixel.colorName(frame.rectHue(new RectF(0.25f, 0.25f, 0.35f, 0.35f))),
+                    CameraLib.Pixel.colorName(frame.rectHue(new RectF(0.75f, 0.25f, 0.85f, 0.35f))));
+            telemetry.addData("camera left", "lower left %s right %s",
+                    CameraLib.Pixel.colorName(frame.rectHue(new RectF(0.25f, 0.75f, 0.35f, 0.85f))),
+                    CameraLib.Pixel.colorName(frame.rectHue(new RectF(0.75f, 0.75f, 0.85f, 0.85f))));
+            // camera right
+            frame.setCameraRight(true);
+            telemetry.addData("camera right", "upper left %s right %s",
+                    CameraLib.Pixel.colorName(frame.rectHue(new RectF(0.25f, 0.25f, 0.35f, 0.35f))),
+                    CameraLib.Pixel.colorName(frame.rectHue(new RectF(0.75f, 0.25f, 0.85f, 0.35f))));
+            telemetry.addData("camera right", "lower left %s right %s",
+                    CameraLib.Pixel.colorName(frame.rectHue(new RectF(0.25f, 0.75f, 0.35f, 0.85f))),
+                    CameraLib.Pixel.colorName(frame.rectHue(new RectF(0.75f, 0.75f, 0.85f, 0.85f))));
         }
 
     }

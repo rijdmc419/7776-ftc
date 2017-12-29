@@ -5,6 +5,7 @@ import android.graphics.Color;
 import android.graphics.ImageFormat;
 import android.graphics.Point;
 import android.graphics.Rect;
+import android.graphics.RectF;
 import android.graphics.SurfaceTexture;
 import android.hardware.Camera;
 
@@ -206,6 +207,7 @@ public class CameraLib {
         Size mSize;      // size of the camera that took this image
         byte[] mData;           // data from Camera preview in NV21 format
         Bitmap mBitmap;         // mData converted to RGB
+        boolean mCameraRight=false;   // true if phone is oriented landscape with camera on right
 
         // make a CameraImage from Camera data (in NV21 format)
         // see http://www.fourcc.org/yuv.php#NV21 for descriptions of various formats
@@ -228,6 +230,10 @@ public class CameraLib {
             return mSize;
         }
 
+        public void setCameraRight(boolean bRight) {
+            mCameraRight = bRight;
+        }
+
         public int dataSize() { return mData.length; }
 
         public String dataToString(int count) {
@@ -248,7 +254,7 @@ public class CameraLib {
         // but we will reverse that so our virtual scanlines still go (as before)
         // x: left-to-right  y: top-to-bottom
         public int getPixel(int x, int y) {
-            return mBitmap.getPixel(mSize.width-1-x, mSize.height-1-y);
+            return mCameraRight ? mBitmap.getPixel(mSize.width-1-x, mSize.height-1-y) : mBitmap.getPixel(x,y);
         }
 
         // return a string representation of the colors along the given scanline, using
@@ -325,13 +331,19 @@ public class CameraLib {
             return columnRep(bandWidth, new HuePosterizer(), f);
         }
 
-        // return a string representation of the colors in a rectangular region of the image, using
+        // convert relative (normalized) rectangle to physical one for this Bitmap
+        public Rect relativeToPhysicalRect(RectF rF) {
+            Rect r = new Rect(Math.round(rF.left*mSize.width), Math.round(rF.top*mSize.height), Math.round(rF.right*mSize.width), Math.round(rF.bottom*mSize.height));
+            return r;
+        }
+
+        // return int representation of the dominant color in a rectangular region of the image, using
         // the given posterizer to reduce int RGB to enumerated colors and then optionally
         // post-filtering those to further reduce the number of distinct colors recognized
         public int rectRep(Rect r, Filter posterizer, Filter f) {
             Histogram hist = new Histogram(15);
             for (int x = r.left; x < r.right; x++) {
-                for (int y = r.bottom; y < r.top; y++) {
+                for (int y = r.top; y < r.bottom; y++) {
                     int pix = getPixel(x, y);                       // get the pixel
                     int hue = posterizer.map(pix);                  // get the posterized color of the pixel
                     if (f != null)                                  // if a mapping filter was provided
@@ -349,6 +361,12 @@ public class CameraLib {
         public int rectDomColor(Rect r, Filter f) {
             return rectRep(r, new DomColorPosterizer(), f);
         }
+        public int rectDomColor(RectF rF) {
+            return rectDomColor(rF, null);
+        }
+        public int rectDomColor(RectF rF, Filter f) {
+            return rectRep(relativeToPhysicalRect(rF), new DomColorPosterizer(), f);
+        }
 
         // find the most common hue of pixels in a given rectangle of the image
         public int rectHue(Rect r) {
@@ -357,6 +375,12 @@ public class CameraLib {
         public int rectHue(Rect r, Filter f) {
             return rectRep(r, new HuePosterizer(), f);
         }
+        public int rectHue(RectF rF) {
+            return rectHue(rF, null);
+        }
+        public int rectHue(RectF rF, Filter f) {
+            return rectRep(relativeToPhysicalRect(rF), new HuePosterizer(), f);
+        }
 
         // compute the centroid of pixels of a given color in the given rectangle of the image
         public Point centroid(Rect r, int color, Filter posterizer, Filter f) {
@@ -364,7 +388,7 @@ public class CameraLib {
             int sumY = 0;
             int nPix = 0;
             for (int x = r.left; x < r.right; x++) {
-                for (int y = r.bottom; y < r.top; y++) {
+                for (int y = r.top; y < r.bottom; y++) {
                     int pix = getPixel(x, y);                        // get the pixel
                     int hue = posterizer.map(pix);                   // get the posterized color of the pixel
                     if (f != null)                                   // if a mapping filter was provided
@@ -390,6 +414,12 @@ public class CameraLib {
         public Point centroidDomColor(Rect r, int color, Filter f) {
             return centroid(r, color, new DomColorPosterizer(), f);
         }
+        public Point centroidDomColor(RectF rF, int color) {
+            return centroidDomColor(rF, color, null);
+        }
+        public Point centroidDomColor(RectF rF, int color, Filter f) {
+            return centroid(relativeToPhysicalRect(rF), color, new DomColorPosterizer(), f);
+        }
 
         // compute the centroid of pixels of a given hue in the given rectangle of the image
         public Point centroidHue(Rect r, int color) {
@@ -398,11 +428,17 @@ public class CameraLib {
         public Point centroidHue(Rect r, int color, Filter f) {
             return centroid(r, color, new HuePosterizer(), f);
         }
+        public Point centroidHue(RectF rF, int color) {
+            return centroidHue(rF, color, null);
+        }
+        public Point centroidHue(RectF rF, int color, Filter f) {
+            return centroid(relativeToPhysicalRect(rF), color, new HuePosterizer(), f);
+        }
 
         public int count(Rect r, int color, Filter posterizer, Filter f) {
             int count = 0;
             for (int x = r.left; x < r.right; x++) {
-                for (int y = r.bottom; y < r.top; y++) {
+                for (int y = r.top; y < r.bottom; y++) {
                     int pix = getPixel(x, y);                        // get the pixel
                     int hue = posterizer.map(pix);                   // get the posterized color of the pixel
                     if (f != null)                                   // if a mapping filter was provided
@@ -422,6 +458,12 @@ public class CameraLib {
         public int countDomColor(Rect r, int color, Filter f) {
             return count(r, color, new DomColorPosterizer(), f);
         }
+        public int countDomColor(RectF rF, int color) {
+            return countDomColor(rF, color, null);
+        }
+        public int countDomColor(RectF rF, int color, Filter f) {
+            return count(relativeToPhysicalRect(rF), color, new DomColorPosterizer(), f);
+        }
 
         // compute the number of pixels of a given hue in the given rectangle of the image
         public int countHue(Rect r, int color) {
@@ -429,6 +471,12 @@ public class CameraLib {
         }
         public int countHue(Rect r, int color, Filter f) {
             return count(r, color, new HuePosterizer(), f);
+        }
+        public int countHue(RectF rF, int color) {
+            return countHue(rF, color, null);
+        }
+        public int countHue(RectF rF, int color, Filter f) {
+            return count(relativeToPhysicalRect(rF), color, new HuePosterizer(), f);
         }
 
         // return the given scanline as a Scanline object (an array of byte grayscale values)

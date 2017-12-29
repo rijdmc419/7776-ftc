@@ -130,6 +130,13 @@ class GoToCryptoBoxGuideStep extends AutoLib.MotorGuideStep implements SetMark {
 
     CameraLib.Filter mBlueFilter;       // filter to map cyan to blue
 
+    // robot-specific settings - where is your camera relative to the block you're trying to place?
+    // if the camera is on the right side of the block, then mCameraOnRight=true and mCameraOffset is positive.
+    // if the camera is on the left side of the block, then mCameraOnRight=false and mCameraOffset is negative.
+    // if the camera is above the block, then set mCameraOnRight=false and set mCameraOffset to the positive offset of the camera from the left edge of the block.
+    final boolean mCameraOnRight = false;     // e.g. orientation of phone on robot (assumed landscape) is with camera on the left
+    final float mCameraOffset = -0.5f;        // e.g. camera lens is 0.5 x bin width to the left of the center of the cryptobox column on the block's left side
+
     ArrayList<ColumnHit> mPrevColumns;  // detected columns on previous pass
 
     SensorLib.PID mPid;                 // proportional–integral–derivative controller (PID controller)
@@ -172,8 +179,7 @@ class GoToCryptoBoxGuideStep extends AutoLib.MotorGuideStep implements SetMark {
                 mCBColumn = 2;
 
         // if the camera is on the right side of the block, we want the right edge of the bin.
-        final boolean bCameraOnRight = true;
-        if (bCameraOnRight)
+        if (mCameraOnRight)
             mCBColumn++;
     }
 
@@ -207,6 +213,9 @@ class GoToCryptoBoxGuideStep extends AutoLib.MotorGuideStep implements SetMark {
             // wrap the Bitmap in a CameraImage so we can scan it for patterns
             CameraLib.CameraImage frame = new CameraLib.CameraImage(bitmap);
 
+            // if phone is mounted with the camera on the right, tell CameraImage so it will sample pixels correctly
+            frame.setCameraRight(mCameraOnRight);
+
             // look for cryptobox columns
             // get unfiltered view of colors (hues) by full-image-height column bands
             final int bandSize = 4;
@@ -214,11 +223,6 @@ class GoToCryptoBoxGuideStep extends AutoLib.MotorGuideStep implements SetMark {
 
             // log debug info ...
             mOpMode.telemetry.addData("hue columns", colString);
-
-            // if string is reversed because camera is upside down, fix it
-            final boolean bReverse = true;
-            if (bReverse)
-                colString = new StringBuilder(colString).reverse().toString();
 
             // look for occurrences of given pattern of column colors
             ArrayList<ColumnHit> columns = new ArrayList<ColumnHit>(8);       // array of column start/end indices
@@ -272,8 +276,7 @@ class GoToCryptoBoxGuideStep extends AutoLib.MotorGuideStep implements SetMark {
                 // TBD
 
                 // compute camera offset from near-side column of target bin (whichever side camera is to the block holder)
-                final float cameraOffset = 0.2f;        // e.g. camera is 0.2 x bin width to the right of block centerline
-                float cameraBinOffset = avgBinWidth * cameraOffset;
+                float cameraBinOffset = avgBinWidth * mCameraOffset;
                 // camera target is center of target column + camera offset in image-string space
                 float cameraTarget = columns.get(mCBColumn-mColumnOffset).mid() + cameraBinOffset;
 

@@ -32,11 +32,14 @@ THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 package org.firstinspires.ftc.teamcode._Test._AutoLib;
 
+import android.app.Activity;
 import android.graphics.Bitmap;
+import android.graphics.Color;
 import android.graphics.Point;
 import android.graphics.Rect;
 import android.graphics.RectF;
 import android.hardware.Camera;
+import android.widget.ImageView;
 
 import com.qualcomm.hardware.modernrobotics.ModernRoboticsI2cGyro;
 import com.qualcomm.robotcore.eventloop.opmode.Autonomous;
@@ -116,6 +119,10 @@ class ColumnHit {
     public int mid() { return (mStart+mEnd)/2; }
 }
 
+interface SetBitmap {
+    public void setBitmap(Bitmap bm);
+}
+
 // this is a guide step that uses camera image data to
 // guide the robot to the indicated bin of the cryptobox
 //
@@ -147,7 +154,9 @@ class GoToCryptoBoxGuideStep extends AutoLib.MotorGuideStep implements SetMark {
     final int minDoneCount = 5;      // require "done" test to succeed this many consecutive times
     int mDoneCount;
 
-    public GoToCryptoBoxGuideStep(OpMode opMode, VuforiaLib_FTC2017 VLib, String pattern, float power) {
+    SetBitmap mSBM;
+
+    public GoToCryptoBoxGuideStep(OpMode opMode, SetBitmap sbm, VuforiaLib_FTC2017 VLib, String pattern, float power) {
         mOpMode = opMode;
         mCBColumn = 1;     // if we never get a cryptobox directive from Vuforia, go for the first bin
         mPattern = Pattern.compile(pattern);    // look for the given pattern of column colors
@@ -158,6 +167,7 @@ class GoToCryptoBoxGuideStep extends AutoLib.MotorGuideStep implements SetMark {
         mPrevColumns = null;
         mColumnOffset = 0;
         mDoneCount = 0;
+        mSBM = sbm;
         
         // construct a default PID controller for correcting heading errors
         final float Kp = 0.02f;        // degree heading proportional term correction per degree of deviation
@@ -219,7 +229,7 @@ class GoToCryptoBoxGuideStep extends AutoLib.MotorGuideStep implements SetMark {
 
             // look for cryptobox columns
             // get unfiltered view of colors (hues) by full-image-height column bands
-            final int bandSize = 4;
+            final int bandSize = 1;
             String colString = frame.columnHue(bandSize);
 
             // log debug info ...
@@ -243,6 +253,14 @@ class GoToCryptoBoxGuideStep extends AutoLib.MotorGuideStep implements SetMark {
             // report the matches in telemetry
             for (ColumnHit h : columns) {
                 mOpMode.telemetry.addData("found ", "%s from %d to %d", mPattern.pattern(), h.start(), h.end());
+            }
+
+            // add annotations to the bitmap showing detected column centers
+            for (ColumnHit h : columns) {
+                for (int y=0; y<30; y++)
+                    bitmap.setPixel(h.mid()*bandSize, y, Color.RED);
+                for (int x=h.start()*bandSize; x<=h.end()*bandSize; x++)
+                    bitmap.setPixel(x, 30, Color.RED);
             }
 
             int nCol = columns.size();
@@ -290,6 +308,15 @@ class GoToCryptoBoxGuideStep extends AutoLib.MotorGuideStep implements SetMark {
                 float cameraBinOffset = avgBinWidth * mCameraOffset;
                 // camera target is center of target column + camera offset in image-string space
                 float cameraTarget = columns.get(mCBColumn-mColumnOffset).mid() + cameraBinOffset;
+
+                // show target point and camera center on image
+                for (int y=10; y<20; y++) {
+                    int x = Math.round(cameraTarget*bandSize);
+                    if (x>=0 && x<bitmap.getWidth())
+                        bitmap.setPixel(x, y, Color.GREEN);
+                }
+                for (int x=-5; x<5; x++)
+                    bitmap.setPixel(x+bitmap.getWidth()/2, 15, Color.GREEN);
 
                 // the above computed target point should be in the middle of the image if we're on course -
                 // if not, correct our course to center it --
@@ -346,6 +373,9 @@ class GoToCryptoBoxGuideStep extends AutoLib.MotorGuideStep implements SetMark {
 
             mOpMode.telemetry.addData("data", "doneCount=%d", mDoneCount);
 
+            // tell the calling opMode about the bitmap so it can display it
+            mSBM.setBitmap(bitmap);
+
             // save column hits for next pass to help handle columns leaving the field of view of
             // the camera as we get close.
             mPrevColumns = columns;
@@ -362,7 +392,7 @@ class GoToCryptoBoxGuideStep extends AutoLib.MotorGuideStep implements SetMark {
 
 //@Autonomous(name="FirstRelicRecAuto1", group ="Auto")
 //@Disabled
-public class FirstRelicRecAuto1 extends OpMode {
+public class FirstRelicRecAuto1 extends OpMode implements SetBitmap {
 
     boolean bDone;
     AutoLib.Sequence mSequence;             // the root of the sequence tree
@@ -370,6 +400,15 @@ public class FirstRelicRecAuto1 extends OpMode {
     GyroSensor mGyro;                       // gyro to use for heading information
     SensorLib.CorrectedGyro mCorrGyro;      // gyro corrector object
     VuforiaLib_FTC2017 mVLib;               // Vuforia wrapper object used by Steps
+
+    ImageView mView;
+    protected Bitmap mBitmap; //the bitmap you will display
+    private static final Object bmLock = new Object(); //synchronization lock so we don't display and write
+
+    public void setBitmap(Bitmap b)
+    {
+        mBitmap = b;
+    }
 
     public void init() {}
 
@@ -407,7 +446,7 @@ public class FirstRelicRecAuto1 extends OpMode {
         mSequence = new AutoLib.LinearSequence();
         // make a step that guides the motion step by looking for a particular (red or blue) Cryptobox
         // it also implements the SetMark interface so VuforiaGetMarkStep can call it to tell which box to go for
-        AutoLib.MotorGuideStep guideStep  = new GoToCryptoBoxGuideStep(this, mVLib, bLookForBlue ? "^b+" : "^r+", 0.6f);
+        AutoLib.MotorGuideStep guideStep  = new GoToCryptoBoxGuideStep(this, this, mVLib, bLookForBlue ? "^b+" : "^r+", 0.6f);
         // make and add to the sequence the step that looks for the Vuforia marker and sets the column (Left,Center,Right)
         // the motion terminator step should look for
         mSequence.add(new VuforiaGetMarkStep(this, mVLib, (SetMark)guideStep));
@@ -415,6 +454,15 @@ public class FirstRelicRecAuto1 extends OpMode {
         mSequence.add(new AutoLib.GuidedTerminatedDriveStep(this, guideStep, null, mMotors));
         // make and add a step that tells us we're done
         mSequence.add(new AutoLib.LogTimeStep(this,"Done!", 5));
+
+        mView = (ImageView)((Activity)hardwareMap.appContext).findViewById(com.qualcomm.ftcrobotcontroller.R.id.OpenCVOverlay);
+        mView.post(new Runnable() {
+            @Override
+            public void run() {
+                mView.setAlpha(1.0f);
+            }
+        });
+
     }
 
     @Override public void start()
@@ -434,6 +482,17 @@ public class FirstRelicRecAuto1 extends OpMode {
             bDone = mSequence.loop();       // returns true when we're done
         else
             telemetry.addData("sequence finished", "");
+
+        //display!
+        mView.getHandler().post(new Runnable() {
+            @Override
+            public void run() {
+                synchronized (bmLock) {
+                    mView.setImageBitmap(mBitmap);
+                    mView.invalidate();
+                }
+            }
+        });
     }
 
     @Override

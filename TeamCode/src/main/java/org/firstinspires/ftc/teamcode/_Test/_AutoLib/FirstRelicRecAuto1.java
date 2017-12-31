@@ -229,11 +229,12 @@ class GoToCryptoBoxGuideStep extends AutoLib.MotorGuideStep implements SetMark {
 
             // look for cryptobox columns
             // get unfiltered view of colors (hues) by full-image-height column bands
-            final int bandSize = 1;
+            final int bandSize = 2;
             String colString = frame.columnHue(bandSize);
 
-            // log debug info ...
-            mOpMode.telemetry.addData("hue columns", colString);
+            // log debug info iff it fits on one line of the DS display ...
+            if (colString.length() <= 25)
+                mOpMode.telemetry.addData("hue columns", colString);
 
             // look for occurrences of given pattern of column colors
             ArrayList<ColumnHit> columns = new ArrayList<ColumnHit>(8);       // array of column start/end indices
@@ -403,7 +404,7 @@ public class FirstRelicRecAuto1 extends OpMode implements SetBitmap {
 
     ImageView mView;
     protected Bitmap mBitmap; //the bitmap you will display
-    private static final Object bmLock = new Object(); //synchronization lock so we don't display and write
+    //private static final Object bmLock = new Object(); //synchronization lock so we don't display and write
 
     public void setBitmap(Bitmap b)
     {
@@ -487,10 +488,10 @@ public class FirstRelicRecAuto1 extends OpMode implements SetBitmap {
         mView.getHandler().post(new Runnable() {
             @Override
             public void run() {
-                synchronized (bmLock) {
+                //synchronized (bmLock) {
                     mView.setImageBitmap(mBitmap);
                     mView.invalidate();
-                }
+                //}
             }
         });
     }

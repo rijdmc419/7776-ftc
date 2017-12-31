@@ -128,58 +128,63 @@ public class VuforiaNavigationTest2 extends OpMode {
         }
 
         // test image access through Vuforia
-        //synchronized (bmLock) {
-            //Update the bitmap here
+        {
+
+            // Update the bitmap here
             mBitmap = mVLib.getBitmap(4);
-        //}
 
-        if (mBitmap != null) {
-            CameraLib.CameraImage frame = new CameraLib.CameraImage(mBitmap);
-            CameraLib.Size camSize = frame.cameraSize();
-            telemetry.addData("Size", String.valueOf(camSize.width) + "x" + String.valueOf(camSize.height));
+            if (mBitmap != null) {
+                CameraLib.CameraImage frame = new CameraLib.CameraImage(mBitmap);
+                CameraLib.Size camSize = frame.cameraSize();
+                telemetry.addData("Size", String.valueOf(camSize.width) + "x" + String.valueOf(camSize.height));
 
-            // sample some blocks of pixels in both phone orientations
-            // camera left
-            frame.setCameraRight(false);
-            telemetry.addData("camera left", "upper left %s right %s",
-                    CameraLib.Pixel.colorName(frame.rectHue(new RectF(0.2f, 0.2f, 0.3f, 0.3f))),
-                    CameraLib.Pixel.colorName(frame.rectHue(new RectF(0.7f, 0.2f, 0.8f, 0.3f))));
-            telemetry.addData("camera left", "lower left %s right %s",
-                    CameraLib.Pixel.colorName(frame.rectHue(new RectF(0.2f, 0.7f, 0.3f, 0.8f))),
-                    CameraLib.Pixel.colorName(frame.rectHue(new RectF(0.7f, 0.7f, 0.8f, 0.8f))));
-            // camera right
-            frame.setCameraRight(true);
-            telemetry.addData("camera right", "upper left %s right %s",
-                    CameraLib.Pixel.colorName(frame.rectHue(new RectF(0.2f, 0.2f, 0.3f, 0.3f))),
-                    CameraLib.Pixel.colorName(frame.rectHue(new RectF(0.7f, 0.2f, 0.8f, 0.3f))));
-            telemetry.addData("camera right", "lower left %s right %s",
-                    CameraLib.Pixel.colorName(frame.rectHue(new RectF(0.2f, 0.7f, 0.3f, 0.8f))),
-                    CameraLib.Pixel.colorName(frame.rectHue(new RectF(0.7f, 0.7f, 0.8f, 0.8f))));
+                // sample some blocks of pixels in both phone orientations
+                // camera left
+                frame.setCameraRight(false);
+                telemetry.addData("camera left", "upper left %s right %s",
+                        CameraLib.Pixel.colorName(frame.rectHue(new RectF(0.2f, 0.2f, 0.3f, 0.3f))),
+                        CameraLib.Pixel.colorName(frame.rectHue(new RectF(0.7f, 0.2f, 0.8f, 0.3f))));
+                telemetry.addData("camera left", "lower left %s right %s",
+                        CameraLib.Pixel.colorName(frame.rectHue(new RectF(0.2f, 0.7f, 0.3f, 0.8f))),
+                        CameraLib.Pixel.colorName(frame.rectHue(new RectF(0.7f, 0.7f, 0.8f, 0.8f))));
+                // camera right
+                frame.setCameraRight(true);
+                telemetry.addData("camera right", "upper left %s right %s",
+                        CameraLib.Pixel.colorName(frame.rectHue(new RectF(0.2f, 0.2f, 0.3f, 0.3f))),
+                        CameraLib.Pixel.colorName(frame.rectHue(new RectF(0.7f, 0.2f, 0.8f, 0.3f))));
+                telemetry.addData("camera right", "lower left %s right %s",
+                        CameraLib.Pixel.colorName(frame.rectHue(new RectF(0.2f, 0.7f, 0.3f, 0.8f))),
+                        CameraLib.Pixel.colorName(frame.rectHue(new RectF(0.7f, 0.7f, 0.8f, 0.8f))));
 
-            // write some pixels into the bitmap we'll display
-            int w = mBitmap.getWidth();
-            int h = mBitmap.getHeight();
-            for (int x=-2; x<=2; x++)
-                for (int y=-2; y<=2; y++) {
-                    mBitmap.setPixel(x+w/4, y+h/4, Color.RED);
-                    mBitmap.setPixel(x+3*w/4, y+h/4, Color.GREEN);
-                    mBitmap.setPixel(x+3*w/4, y+3*h/4, Color.BLUE);
-                    mBitmap.setPixel(x+w/4, y+3*h/4, Color.WHITE);
-                }
-
-            //display!
-            mView.getHandler().post(new Runnable() {
-                @Override
-                public void run() {
-                    synchronized (bmLock) {
-                        mView.setImageBitmap(mBitmap);
-                        mView.invalidate();
+                // write some pixels into the bitmap we'll display
+                synchronized (bmLock) {
+                    int w = mBitmap.getWidth();
+                    int h = mBitmap.getHeight();
+                    for (int x = -2; x <= 2; x++) {
+                        for (int y = -2; y <= 2; y++) {
+                            mBitmap.setPixel(x + w / 4, y + h / 4, Color.RED);
+                            mBitmap.setPixel(x + 3 * w / 4, y + h / 4, Color.GREEN);
+                            mBitmap.setPixel(x + 3 * w / 4, y + 3 * h / 4, Color.BLUE);
+                            mBitmap.setPixel(x + w / 4, y + 3 * h / 4, Color.WHITE);
+                        }
                     }
                 }
-            });
+
+            }
         }
 
+        //display!
+        mView.getHandler().post(new Runnable() {
+            @Override
+            public void run() {
+                synchronized (bmLock) {
+                    mView.setImageBitmap(mBitmap);
+                    mView.invalidate();
+                }
+            }
+        });
     }
+
 
     @Override public void stop()
     {

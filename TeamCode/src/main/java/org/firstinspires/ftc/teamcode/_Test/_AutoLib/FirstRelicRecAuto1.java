@@ -213,7 +213,7 @@ class GoToCryptoBoxGuideStep extends AutoLib.MotorGuideStep implements SetMark {
 
         // get most recent frame from camera (through Vuforia)
         RectF rect = new RectF(0,0,1f,0.67f);          // top 2/3 of the image should be enough and avoids floor junk
-        Bitmap bitmap = mVLib.getBitmap(rect, 4);                      // get cropped, downsampled image from Vuforia
+        Bitmap bitmap = mVLib.getBitmap(rect, 8);                      // get cropped, downsampled image from Vuforia
 
         //Bitmap bitmap = mVLib.getBitmap(4);                      // get uncropped, downsampled image from Vuforia
 
@@ -382,6 +382,9 @@ class GoToCryptoBoxGuideStep extends AutoLib.MotorGuideStep implements SetMark {
             mPrevColumns = columns;
 
         }
+        else
+            mOpMode.telemetry.addData("getBitmap()", "no new frame");
+
 
         return false;  // haven't found anything yet
     }
@@ -405,6 +408,8 @@ public class FirstRelicRecAuto1 extends OpMode implements SetBitmap {
     ImageView mView;
     protected Bitmap mBitmap; //the bitmap you will display
     //private static final Object bmLock = new Object(); //synchronization lock so we don't display and write
+
+    double mTime;   // time of last loop() call -- used to compute frames per second
 
     public void setBitmap(Bitmap b)
     {
@@ -463,7 +468,6 @@ public class FirstRelicRecAuto1 extends OpMode implements SetBitmap {
                 mView.setAlpha(1.0f);
             }
         });
-
     }
 
     @Override public void start()
@@ -473,10 +477,18 @@ public class FirstRelicRecAuto1 extends OpMode implements SetBitmap {
 
         // start Vuforia scanning
         mVLib.start();
+
+        // get start time for frames/sec computation
+        mTime = getRuntime();
     }
 
     @Override
     public void loop() {
+        // log frames per second
+        double dTime = getRuntime() - mTime;
+        if (dTime > 0)
+            telemetry.addData("frames/sec", 1.0/dTime);
+        mTime = getRuntime();       // for next time ...
 
         // until we're done, keep looping through the current Step(s)
         if (!bDone)

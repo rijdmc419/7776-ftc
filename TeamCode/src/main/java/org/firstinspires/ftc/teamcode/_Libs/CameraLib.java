@@ -331,6 +331,36 @@ public class CameraLib {
             return columnRep(bandWidth, new HuePosterizer(), f);
         }
 
+        // return a string representation of the average color in each column-band of the image, using
+        // the given posterizer to reduce int RGB to enumerated colors and then optionally
+        // post-filtering those to further reduce the number of distinct colors recognized
+        public String columnAvgRep(int bandWidth, Filter posterizer, Filter f) {
+            String sDom = "";               // string describing the line of pixels ito "dominant color"
+            int red = 0;
+            int green = 0;
+            int blue = 0;
+            int npix = 0;
+            for (int x=0; x<cameraSize().width; x++) {
+                for (int y=0; y<cameraSize().height; y++) {
+                    int pix = getPixel(x, y);                        // get the pixel
+                    red += Color.red(pix);                           // accumulate the RGB contributions
+                    green += Color.green(pix);
+                    blue += Color.blue(pix);
+                    npix++;
+                }
+                if (x%bandWidth == (bandWidth-1)) {
+                    int avgColor = Color.rgb(red/npix, green/npix, blue/npix);
+                    npix = 0; red = 0; green = 0; blue = 0;          // reset accumulators
+                    int domClr = posterizer.map(avgColor);           // get the posterized color of the pixel
+                    if (f != null)                                   // if a mapping filter was provided
+                        domClr = f.map(domClr);                      // use it to map values
+                    sDom += CameraLib.Pixel.colorName(domClr);       // add symbol string for the posterized average color in this band
+                }
+            }
+            return sDom;
+        }
+
+
         // convert relative (normalized) rectangle to physical one for this Bitmap
         public Rect relativeToPhysicalRect(RectF rF) {
             Rect r = new Rect(Math.round(rF.left*mSize.width), Math.round(rF.top*mSize.height), Math.round(rF.right*mSize.width), Math.round(rF.bottom*mSize.height));

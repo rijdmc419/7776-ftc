@@ -34,7 +34,9 @@ package org.firstinspires.ftc.teamcode._Test._AutoLib;
 
 import android.app.Activity;
 import android.graphics.Bitmap;
+import android.graphics.Canvas;
 import android.graphics.Color;
+import android.graphics.Paint;
 import android.graphics.Point;
 import android.graphics.Rect;
 import android.graphics.RectF;
@@ -149,12 +151,15 @@ class GoToCryptoBoxGuideStep extends AutoLib.MotorGuideStep implements SetMark {
     SensorLib.PID mPid;                 // proportional–integral–derivative controller (PID controller)
     double mPrevTime;                   // time of previous loop() call
     ArrayList<AutoLib.SetPower> mMotorSteps;   // the motor steps we're guiding - assumed order is right ... left ...
-    float mPower;                      // base power setting for motors
+    float mPower;                       // base power setting for motors
 
-    final int minDoneCount = 5;      // require "done" test to succeed this many consecutive times
+    final int minDoneCount = 5;         // require "done" test to succeed this many consecutive times
     int mDoneCount;
 
-    SetBitmap mSBM;
+    SetBitmap mSBM;                     // interface through which we tell the controlling opMode about our Bitmap so it can display it
+
+    Paint mPaintRed, mPaintGreen;                       // used to draw info overlays on image
+
 
     public GoToCryptoBoxGuideStep(OpMode opMode, SetBitmap sbm, VuforiaLib_FTC2017 VLib, String pattern, float power) {
         mOpMode = opMode;
@@ -176,6 +181,11 @@ class GoToCryptoBoxGuideStep extends AutoLib.MotorGuideStep implements SetMark {
         final float KiCutoff = 3.0f;   // maximum angle error for which we update integrator
         mPid = new SensorLib.PID(Kp, Ki, Kd, KiCutoff);
 
+        // create stuff we'll use to draw debug info overlays on the image
+        mPaintRed = new Paint();
+        mPaintRed.setColor(Color.RED);
+        mPaintGreen = new Paint();
+        mPaintGreen.setColor(Color.GREEN);
     }
 
     public void setMark(String s) {
@@ -257,11 +267,10 @@ class GoToCryptoBoxGuideStep extends AutoLib.MotorGuideStep implements SetMark {
             }
 
             // add annotations to the bitmap showing detected column centers
+            Canvas canvas = new Canvas(bitmap);
             for (ColumnHit h : columns) {
-                for (int y=0; y<30; y++)
-                    bitmap.setPixel(h.mid()*bandSize, y, Color.RED);
-                for (int x=h.start()*bandSize; x<=h.end()*bandSize; x++)
-                    bitmap.setPixel(x, 30, Color.RED);
+                canvas.drawLine(h.mid()*bandSize,0, h.mid()*bandSize, 30, mPaintRed);
+                canvas.drawLine(h.start()*bandSize,30, h.end()*bandSize, 30, mPaintRed);
             }
 
             int nCol = columns.size();
@@ -311,13 +320,12 @@ class GoToCryptoBoxGuideStep extends AutoLib.MotorGuideStep implements SetMark {
                 float cameraTarget = columns.get(mCBColumn-mColumnOffset).mid() + cameraBinOffset;
 
                 // show target point and camera center on image
-                for (int y=10; y<20; y++) {
-                    int x = Math.round(cameraTarget*bandSize);
+                {
+                    canvas.drawLine(bitmap.getWidth()/2-5, 15, bitmap.getWidth()/2+5, 15, mPaintGreen);
+                    float x = cameraTarget*bandSize;
                     if (x>=0 && x<bitmap.getWidth())
-                        bitmap.setPixel(x, y, Color.GREEN);
+                        canvas.drawLine(x, 10, x, 20, mPaintGreen);
                 }
-                for (int x=-5; x<5; x++)
-                    bitmap.setPixel(x+bitmap.getWidth()/2, 15, Color.GREEN);
 
                 // the above computed target point should be in the middle of the image if we're on course -
                 // if not, correct our course to center it --

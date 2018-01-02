@@ -505,7 +505,7 @@ public class FirstRelicRecAuto1 extends OpMode implements SetBitmap {
             telemetry.addData("sequence finished", "");
 
         //display!
-        mView.getHandler().post(new Runnable() {
+        mView.post(new Runnable() {
             @Override
             public void run() {
                 //synchronized (bmLock) {

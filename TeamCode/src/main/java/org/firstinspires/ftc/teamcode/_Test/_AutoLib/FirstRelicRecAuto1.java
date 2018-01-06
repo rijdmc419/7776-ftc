@@ -414,7 +414,7 @@ public class FirstRelicRecAuto1 extends OpMode implements SetBitmap {
     VuforiaLib_FTC2017 mVLib;               // Vuforia wrapper object used by Steps
 
     ImageView mView;
-    protected Bitmap mBitmap; //the bitmap you will display
+    Bitmap mBitmap; //the bitmap you will display
     //private static final Object bmLock = new Object(); //synchronization lock so we don't display and write
 
     double mTime;   // time of last loop() call -- used to compute frames per second
@@ -476,6 +476,7 @@ public class FirstRelicRecAuto1 extends OpMode implements SetBitmap {
                 mView.setAlpha(1.0f);
             }
         });
+        mBitmap = null;
     }
 
     @Override public void start()

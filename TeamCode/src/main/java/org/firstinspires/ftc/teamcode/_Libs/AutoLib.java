@@ -439,47 +439,53 @@ public class AutoLib {
         return ((x-x0)/(x1-x0))*(y1-y0) + y0;
     }
 
-    // return normalization factor that makes max magnitude of any argument 1
-    static public float normalize(float a, float b)
+    // return normalization factor that makes max magnitude of any argument f
+    static public float normalize(float f, float a, float b)
     {
         float m = Math.max(Math.abs(a), Math.abs(b));
-        return (m > 1.0f) ? 1.0f/m : 1.0f;
+        return (m > f) ? f/m : 1.0f;
     }
+    static public float normalize(float a, float b) { return normalize(1.0f, a, b); }
 
-    static public float normalize(float a, float b, float c, float d)
+    static public float normalize(float f, float a, float b, float c, float d)
     {
         float m = Math.max(Math.max(Math.abs(a), Math.abs(b)), Math.max(Math.abs(c), Math.abs(d)));
-        return (m > 1.0f) ? 1.0f/m : 1.0f;
+        return (m > f) ? f/m : 1.0f;
     }
+    static public float normalize(float a, float b, float c, float d) { return normalize(1.0f, a, b, c, d); }
 
     // return normalization factor that makes max magnitude of any argument 1
-    static public double normalize(double a, double b)
+    static public double normalize(double f, double a, double b)
     {
         double m = Math.max(Math.abs(a), Math.abs(b));
-        return (m > 1.0) ? 1.0/m : 1.0;
+        return (m > f) ? f/m : 1.0;
     }
+    static public double normalize(double a, double b) { return normalize(1.0, a, b); }
 
-    static public double normalize(double a, double b, double c, double d)
+    static public double normalize(double f, double a, double b, double c, double d)
     {
         double m = Math.max(Math.max(Math.abs(a), Math.abs(b)), Math.max(Math.abs(c), Math.abs(d)));
-        return (m > 1.0) ? 1.0/m : 1.0;
+        return (m > f) ? f/m : 1.0;
     }
+    static public double normalize(double a, double b, double c, double d) { return normalize(1.0, a, b, c, d); }
 
-    static public float normalize(float[] a)
+    static public float normalize(float f, float[] a)
     {
         float m = 0;
         for (float x : a)
             m = Math.max(m, Math.abs(x));
-        return (m > 1.0f) ? 1.0f/m : 1.0f;
+        return (m > f) ? f/m : 1.0f;
     }
+    static public float normalize(float[] a) { return normalize(1.0f, a); }
 
-    static public double normalize(double[] a)
+    static public double normalize(double f, double[] a)
     {
         double m = 0;
         for (double x : a)
             m = Math.max(m, Math.abs(x));
-        return (m > 1.0) ? 1.0/m : 1.0;
+        return (m > f) ? f/m : 1.0;
     }
+    static public double normalize(double[] a) { return normalize(1.0, a); }
 
 
     // some Steps that use various sensor input to control other Steps
@@ -505,6 +511,7 @@ public class AutoLib {
         private SensorLib.PID mPid;                         // proportional–integral–derivative controller (PID controller)
         private double mPrevTime;                           // time of previous loop() call
         private ArrayList<SetPower> mMotorSteps;            // the motor steps we're guiding - assumed order is right ... left ...
+        private float mMaxPower;                            // max allowed power including direction correction
 
         public GyroGuideStep(OpMode mode, float heading, HeadingSensor gyro, SensorLib.PID pid,
                              ArrayList<SetPower> motorsteps, float power)
@@ -524,6 +531,13 @@ public class AutoLib {
             }
             mMotorSteps = motorsteps;
             mPower = power;
+            mMaxPower = 1.0f;
+        }
+
+        // set max allowed power including direction correction ---
+        // e.g. to turn in place slowly, set power=0 and maxPower<1.0
+        public void setMaxPower(float mp) {
+            mMaxPower = mp;
         }
 
         // set motor control steps this step should control (assumes ctor called with null argument)
@@ -559,8 +573,8 @@ public class AutoLib {
             float rightPower = mPower + correction;
             float leftPower = mPower - correction;
 
-            // normalize so neither has magnitude > 1
-            float norm = normalize(rightPower, leftPower);
+            // normalize so neither has magnitude > maxPower
+            float norm = normalize(mMaxPower, rightPower, leftPower);
             rightPower *= norm;
             leftPower *= norm;
 
@@ -729,6 +743,7 @@ public class AutoLib {
         private SensorLib.PID mPid;                         // proportional–integral–derivative controller (PID controller)
         private double mPrevTime;                           // time of previous loop() call
         private ArrayList<AutoLib.SetPower> mMotorSteps;    // the motor steps we're guiding - assumed order is fr, br, fl, bl
+        private float mMaxPower;                            // max allowed power including direction correction
 
         public SquirrelyGyroGuideStep(OpMode mode, float direction, float heading, HeadingSensor gyro, SensorLib.PID pid,
                                       ArrayList<AutoLib.SetPower> motorsteps, float power) {
@@ -747,7 +762,13 @@ public class AutoLib {
                 mPid = new SensorLib.PID(Kp, Ki, Kd, KiCutoff);
             }
             mMotorSteps = motorsteps;
-            mPower = power;
+            mMaxPower = 1.0f;
+        }
+
+        // set max allowed power including direction correction ---
+        // e.g. to turn in place slowly, set power=0 and maxPower<1.0
+        public void setMaxPower(float mp) {
+            mMaxPower = mp;
         }
 
         // set motor control steps this step should control (assumes ctor called with null argument)
@@ -795,13 +816,13 @@ public class AutoLib {
             AutoLib.MotorPowers mp = AutoLib.GetSquirrelyWheelMotorPowers(relDir);
 
             // calculate powers of the 4 motors
-            double pFR = (mp.Front()-hdCorr) * mPower;
-            double pBR = (mp.Back()-hdCorr) * mPower;
-            double pFL = (mp.Front()+hdCorr) * mPower;
-            double pBL = (mp.Back()+hdCorr) * mPower;
+            double pFR = mp.Front() * mPower - hdCorr;
+            double pBR = mp.Back() * mPower - hdCorr;
+            double pFL = mp.Front() * mPower + hdCorr;
+            double pBL = mp.Back() * mPower + hdCorr;
 
-            // normalize powers so none has magnitude > 1
-            double norm = normalize(pFR, pBR, pFL, pBL);
+            // normalize powers so none has magnitude > maxPower
+            double norm = normalize(mMaxPower, pFR, pBR, pFL, pBL);
             pFR *= norm;  pBR *= norm;  pFL *= norm;  pBL *= norm;
 
             // set the powers

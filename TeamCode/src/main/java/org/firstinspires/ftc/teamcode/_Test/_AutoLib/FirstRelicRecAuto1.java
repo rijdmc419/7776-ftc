@@ -138,6 +138,7 @@ class GoToCryptoBoxGuideStep extends AutoLib.MotorGuideStep implements SetMark {
     final float mCameraOffset = -0.5f;        // e.g. camera lens is 0.5 x bin width to the left of the center of the cryptobox column on the block's left side
 
     ArrayList<ColumnHit> mPrevColumns;  // detected columns on previous pass
+    float mPrevBinWidth;                // avg bin width on previous pass
 
     SensorLib.PID mPid;                 // proportional–integral–derivative controller (PID controller)
     double mPrevTime;                   // time of previous loop() call
@@ -158,7 +159,8 @@ class GoToCryptoBoxGuideStep extends AutoLib.MotorGuideStep implements SetMark {
         mPrevColumns = null;
         mColumnOffset = 0;
         mDoneCount = 0;
-        
+        mPrevBinWidth = 0;
+
         // construct a default PID controller for correcting heading errors
         final float Kp = 0.02f;        // degree heading proportional term correction per degree of deviation
         final float Ki = 0.0f;         // ... integrator term
@@ -247,8 +249,9 @@ class GoToCryptoBoxGuideStep extends AutoLib.MotorGuideStep implements SetMark {
 
             int nCol = columns.size();
 
-            // compute average distance between columns = distance between outermost / #bins
-            float avgBinWidth = nCol>1 ? (float)(columns.get(nCol-1).end() - columns.get(0).start()) / (float)(nCol-1) : 0;
+            // compute average distance between columns = distance between outermost / #bins -- if we can't see enough columns, use prev estimate
+            float avgBinWidth = nCol>1 ? (float)(columns.get(nCol-1).end() - columns.get(0).start()) / (float)(nCol-1) : mPrevBinWidth;
+            mPrevBinWidth = avgBinWidth;
 
             // try to handle case where a column has left (or entered) the left-edge of the frame between the prev view and this one
             if (mPrevColumns != null  &&  mPrevColumns.size()>0  &&  nCol>0  && avgBinWidth > 0) {

@@ -39,7 +39,7 @@ class MyUsbMouse {
 
     OpMode mOpMode;
 
-    public float mMouseX, mMouseY;
+    public int mMouseX, mMouseY, mMouseDX, mMouseDY;
 
     UsbManager usbManager;
     UsbDevice usbDevice;
@@ -82,6 +82,7 @@ class MyUsbMouse {
                             if (device != null) {
                                 // call method to set up device communication
                                 mOpMode.telemetry.addData(TAG, "permission granted. access mouse.");
+                                usbDevice = device;     // save for subsequent accesses
 
                                 // repeat in a different thread
                                 transfer(device);
@@ -107,6 +108,7 @@ class MyUsbMouse {
     }
 
     public boolean loop() {
+        transfer(usbDevice);
         return false;
     }
 
@@ -124,25 +126,35 @@ class MyUsbMouse {
 
     private void transfer(UsbDevice device) {
 
-        int TIMEOUT = 0;
+        int TIMEOUT = 100;      // millisec
         boolean forceClaim = true;
 
         // just grab the first endpoint
         UsbInterface intf = device.getInterface(0);
         UsbEndpoint endpoint = intf.getEndpoint(0);
         UsbDeviceConnection connection = this.usbManager.openDevice(device);
-        connection.claimInterface(intf, forceClaim);
+        if (connection != null) {
+            if (connection.claimInterface(intf, forceClaim)) {
 
-        byte[] bytes = new byte[endpoint.getMaxPacketSize()];
+                byte[] bytes = new byte[endpoint.getMaxPacketSize()];
 
-        connection.bulkTransfer(endpoint, bytes, bytes.length, TIMEOUT);
+                if (connection.bulkTransfer(endpoint, bytes, bytes.length, TIMEOUT) >= 0) {
+                    // specify a timeout to prevent stalling here if mouse is still,
+                    // leading to loop-hang error from FTC framework
 
-        // depending on mouse firmware and vendor the information you're looking for may
-        // be in a different order or position. For some logitech devices the following
-        // is true:
+                    // depending on mouse firmware and vendor the information you're looking for may
+                    // be in a different order or position. For some logitech devices the following
+                    // is true:
 
-        mMouseX = (int) bytes[1];
-        mMouseY = (int) bytes[2];
+                    mMouseDX = (int) bytes[1];
+                    mMouseDY = (int) bytes[2];
+                    mMouseX += mMouseDX;
+                    mMouseY += mMouseDY;
+                }
+
+                connection.releaseInterface(intf);
+            }
+        }
     }
 
 }
@@ -152,12 +164,13 @@ class MyMouseInputDevice {
 
     OpMode mOpMode;
     InputDevice mMouseDevice = null;
-
+    Activity mAct;
     public float mMouseX, mMouseY, mMouseRawX, mMouseRawY;
 
-    MyMouseInputDevice(OpMode opmode)
+    MyMouseInputDevice(OpMode opmode, Activity act)
     {
         mOpMode = opmode;
+        mAct = act;
     }
 
     public void connect()
@@ -180,9 +193,7 @@ class MyMouseInputDevice {
 
         // install a GenericMotionListener on the screen of the FtcRobotControllerActivity --
         // requires modified FtcRobotControllerActivity.java that exposes static ref to itself as ftcRCact
-        /*
-        Activity ftcRCact = FtcRobotControllerActivity.ftcRCact;
-        View view = ftcRCact.findViewById(com.qualcomm.ftcrobotcontroller.R.id.entire_screen);
+        View view = mAct.findViewById(com.qualcomm.ftcrobotcontroller.R.id.entire_screen);
         view.setOnGenericMotionListener(new View.OnGenericMotionListener() {
             @Override
             public boolean onGenericMotion(View v, MotionEvent event) {
@@ -193,7 +204,7 @@ class MyMouseInputDevice {
                 return false;
             }
         });
-         */
+
     }
 
     public boolean loop() {
@@ -203,11 +214,8 @@ class MyMouseInputDevice {
     public void disconnect()
     {
         // remove the GenericMotionListener from the Activity's View
-        /*
-        Activity ftcRCact = FtcRobotControllerActivity.ftcRCact;
-        View view = ftcRCact.findViewById(com.qualcomm.ftcrobotcontroller.R.id.entire_screen);
+        View view = mAct.findViewById(com.qualcomm.ftcrobotcontroller.R.id.entire_screen);
         view.setOnGenericMotionListener(null);
-         */
     }
 
 }
@@ -229,24 +237,26 @@ public class MouseTest1 extends OpMode {
         mMyUsbMouse.connect();
 
         // also try to get mouse as an input device
-        mMyMouseInputDevice = new MyMouseInputDevice(this);
-        mMyMouseInputDevice.connect();
+        //mMyMouseInputDevice = new MyMouseInputDevice(this, (Activity)(hardwareMap.appContext));
+        //mMyMouseInputDevice.connect();
     }
 
     public void loop() {
         mMyUsbMouse.loop();
-        telemetry.addData("MyUsbMouse X Y: ", "%4.2f %4.2f", mMyUsbMouse.mMouseX, mMyUsbMouse.mMouseY);
+        telemetry.addData("MyUsbMouse ", "DX DY %d %d  X Y %d %d", mMyUsbMouse.mMouseDX, mMyUsbMouse.mMouseDY, mMyUsbMouse.mMouseX, mMyUsbMouse.mMouseY);
 
+        /*
         mMyMouseInputDevice.loop();
-        telemetry.addData("MyMouseInputDevice X Y: ", "%4.2f %4.2f", mMyMouseInputDevice.mMouseX, mMyMouseInputDevice.mMouseY);
-        telemetry.addData("MyMouseInputDevice raw X Y: ", "%4.2f %4.2f", mMyMouseInputDevice.mMouseRawX, mMyMouseInputDevice.mMouseRawY);
+        telemetry.addData("MyMouseInputDevice X Y", "%4.2f %4.2f", mMyMouseInputDevice.mMouseX, mMyMouseInputDevice.mMouseY);
+        telemetry.addData("MyMouseInputDevice raw X Y", "%4.2f %4.2f", mMyMouseInputDevice.mMouseRawX, mMyMouseInputDevice.mMouseRawY);
+        */
     }
 
     public void stop() {
         telemetry.addData("stop() called", "");
 
         mMyUsbMouse.disconnect();
-        mMyMouseInputDevice.disconnect();
+        //mMyMouseInputDevice.disconnect();
     }
 
 }

@@ -34,7 +34,8 @@ import java.util.Iterator;
  */
 
 // http://stackoverflow.com/questions/13280402/reading-raw-mouse-data-on-android
-// this doesn't currently work - it always returns "no USB device found"
+// this works on Android 5.0 and later.
+// on Android 4.4 it doesn't work - it always returns "no USB device found"
 class MyUsbMouse {
 
     OpMode mOpMode;

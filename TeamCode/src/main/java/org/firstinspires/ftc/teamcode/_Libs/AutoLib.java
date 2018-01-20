@@ -1,10 +1,14 @@
 package org.firstinspires.ftc.teamcode._Libs;
 
+import android.support.annotation.ColorInt;
+
 import com.qualcomm.robotcore.eventloop.opmode.OpMode;
+import com.qualcomm.robotcore.hardware.ColorSensor;
 import com.qualcomm.robotcore.hardware.DcMotor;
 import com.qualcomm.robotcore.hardware.DcMotorController;
 import com.qualcomm.robotcore.hardware.GyroSensor;
 import com.qualcomm.robotcore.hardware.HardwareDevice;
+import com.qualcomm.robotcore.hardware.I2cAddr;
 import com.qualcomm.robotcore.hardware.Servo;
 import com.qualcomm.robotcore.hardware.ServoController;
 import com.qualcomm.robotcore.hardware.configuration.MotorConfigurationType;
@@ -1793,11 +1797,81 @@ public class AutoLib {
 
     }
 
+    // a dummy ColorSensor that just returns default info --
+    // useful for testing ColorSensor code when you don't have real hardware handy
+    static public class TestColorSensor extends TestHardware implements ColorSensor {
+        OpMode mOpMode;     // needed for logging data
+        String mName;       // string id of this gyro
+
+        public TestColorSensor(String name, OpMode opMode) {
+            super();
+            mOpMode = opMode;
+            mName = name;
+        }
+
+        /**
+         * Get the Red values detected by the sensor as an int.
+         * @return reading, unscaled.
+         */
+        public int red() { return 0; }
+
+        /**
+         * Get the Green values detected by the sensor as an int.
+         * @return reading, unscaled.
+         */
+        public int green() { return 0; }
+
+        /**
+         * Get the Blue values detected by the sensor as an int.
+         * @return reading, unscaled.
+         */
+        public int blue() { return 255; }
+
+        /**
+         * Get the amount of light detected by the sensor as an int.
+         * @return reading, unscaled.
+         */
+        public int alpha() { return 0; }
+
+        /**
+         * Get the "hue"
+         * @return hue
+         */
+        @ColorInt
+        public int argb() { return 0; }
+
+        /**
+         * Enable the LED light
+         * @param enable true to enable; false to disable
+         */
+        public void enableLed(boolean enable) {}
+
+        /**
+         * Set the I2C address to a new value.
+         *
+         */
+        public void setI2cAddress(I2cAddr newAddress) {}
+
+        /**
+         * Get the current I2C Address of this object.
+         * Not necessarily the same as the I2C address of the actual device.
+         *
+         * Return the current I2C address.
+         * @return current I2C address
+         */
+        public I2cAddr getI2cAddress() {return I2cAddr.zero();}
+
+        public String status() { return "Status okay"; }
+        public String getDeviceName() { return "AutoLib_TestGyro: " + mName; }
+
+    }
+
     // define interface to Factory that creates various kinds of hardware objects
     static public interface HardwareFactory {
         public DcMotor getDcMotor(String name);
         public Servo getServo(String name);
         public GyroSensor getGyro(String name);
+        public ColorSensor getColorSensor(String name);
     }
 
     // this implementation generates test-hardware objects that just log data
@@ -1818,6 +1892,10 @@ public class AutoLib {
 
         public GyroSensor getGyro(String name){
             return new TestGyro(name, mOpMode);
+        }
+
+        public ColorSensor getColorSensor(String name){
+            return new TestColorSensor(name, mOpMode);
         }
     }
 
@@ -1870,6 +1948,17 @@ public class AutoLib {
                 // okay - just return null (absent) for this servo
             }
             return gyro;
+        }
+
+        public ColorSensor getColorSensor(String name){
+            ColorSensor cs = null;
+            try {
+                cs = mOpMode.hardwareMap.colorSensor.get(name);
+            }
+            catch (Exception e) {
+                // okay - just return null (absent) for this servo
+            }
+            return cs;
         }
 
     }

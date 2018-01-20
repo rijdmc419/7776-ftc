@@ -119,6 +119,7 @@ class ColumnHit {
     public int start() { return mStart; }
     public int end() { return mEnd; }
     public int mid() { return (mStart+mEnd)/2; }
+    public int width() { return mEnd-mStart+1; }
 }
 
 interface SetBitmap {
@@ -225,7 +226,7 @@ class GoToCryptoBoxGuideStep extends AutoLib.MotorGuideStep implements SetMark {
 
         // get most recent frame from camera (through Vuforia)
         RectF rect = new RectF(0,0,1f,0.67f);          // top 2/3 of the image should be enough and avoids floor junk
-        Bitmap bitmap = mVLib.getBitmap(rect, 8);                      // get cropped, downsampled image from Vuforia
+        Bitmap bitmap = mVLib.getBitmap(rect, 8);                      // get cropped, downsampled image from Vuforia (use 8 for ZTE, 16 for S5)
 
         //Bitmap bitmap = mVLib.getBitmap(4);                      // get uncropped, downsampled image from Vuforia
 
@@ -241,7 +242,7 @@ class GoToCryptoBoxGuideStep extends AutoLib.MotorGuideStep implements SetMark {
 
             // look for cryptobox columns
             // get unfiltered view of colors (hues) by full-image-height column bands
-            final int bandSize = 2;
+            final int bandSize = 2;         // or try 1 for better resolution -- should be fast enough if image isn't too big
             String colString = frame.columnHue(bandSize);
 
             // log debug info iff it fits on one line of the DS display ...
@@ -277,8 +278,10 @@ class GoToCryptoBoxGuideStep extends AutoLib.MotorGuideStep implements SetMark {
 
             int nCol = columns.size();
 
-            // compute average distance between columns = distance between outermost / #bins -- if we can't see enough columns, use prev estimate
-            float avgBinWidth = nCol>1 ? (float)(columns.get(nCol-1).end() - columns.get(0).start()) / (float)(nCol-1) : mPrevBinWidth;
+            // compute average distance between columns = distance between outermost / #bins --
+            // if we can only see 1 column, use ratio of bin-width (~7.5") to column-width (~1.5"); otherwise use prev estimate
+            float avgBinWidth = nCol>1 ? (float)(columns.get(nCol-1).end() - columns.get(0).start()) / (float)(nCol-1) :
+                                nCol==1 ? columns.get(0).width() * 5.0f : mPrevBinWidth;
             mPrevBinWidth = avgBinWidth;
 
             // try to handle case where a column has left (or entered) the left-edge of the frame between the prev view and this one
@@ -313,9 +316,7 @@ class GoToCryptoBoxGuideStep extends AutoLib.MotorGuideStep implements SetMark {
 
             // if we found some columns, try to correct course using their positions in the image
             if (mCBColumn >= mColumnOffset && nCol > mCBColumn-mColumnOffset) {
-                // to start, we need to see all four columns to know where we're going ...
-                // after that, we try to match up the columns visible in this view with those from the previous pass
-                // TBD
+                // the target column is in the view ...
 
                 // compute camera offset from near-side column of target bin (whichever side camera is to the block holder)
                 float cameraBinOffset = avgBinWidth * mCameraOffset;
@@ -366,6 +367,11 @@ class GoToCryptoBoxGuideStep extends AutoLib.MotorGuideStep implements SetMark {
                 }
 
                 mOpMode.telemetry.addData("motors", "left=%f right=%f", leftPower, rightPower);
+            }
+            else {
+                // the target column is not in the view -- it had to have been visible when we started,
+                // but it has since left the frame -- assume it's now to the left of the frame, so turn that way ...
+                // TBD ...
             }
 
             // when we're really close ...

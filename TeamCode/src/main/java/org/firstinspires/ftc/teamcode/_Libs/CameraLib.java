@@ -296,7 +296,11 @@ public class CameraLib {
         // return a string representation of the colors in each column-band of the image, using
         // the given posterizer to reduce int RGB to enumerated colors and then optionally
         // post-filtering those to further reduce the number of distinct colors recognized
-        public String columnRep(int bandWidth, Filter posterizer, Filter f) {
+        public String columnRep(int bandwidth, Filter posterizer, Filter f) {
+            return columnRep(bandwidth, posterizer, f, 0);
+        }
+
+        public String columnRep(int bandWidth, Filter posterizer, Filter f, float minFrac) {
             Histogram hist = new Histogram(15);
             String sDom = "";               // string describing the line of pixels ito "dominant color"
             for (int x=0; x<cameraSize().width; x++) {
@@ -308,7 +312,11 @@ public class CameraLib {
                     hist.add(domClr);                                // add the sample to Histogram for this band
                 }
                 if (x%bandWidth == (bandWidth-1)) {
-                    sDom += CameraLib.Pixel.colorName(hist.maxBin());  // add symbol string for most popular color in this band
+                    int histmax = hist.maxBin();                     // get the index of the most popular entry
+                    if (minFrac > 0 && hist.count(histmax) < minFrac * bandWidth * cameraSize().height)
+                        sDom += "?";                                 // no color was dominant enough, so append a "?"
+                    else
+                        sDom += CameraLib.Pixel.colorName(histmax);  // add symbol string for most popular color in this band
                     hist.clear();                                    // ... and restart the histogram for the next band
                 }
             }
@@ -319,17 +327,15 @@ public class CameraLib {
         public String columnDomColor(int bandWidth) {
             return columnDomColor(bandWidth, null);
         }
-        public String columnDomColor(int bandWidth, Filter f) {
-            return columnRep(bandWidth, new DomColorPosterizer(), f);
-        }
+        public String columnDomColor(int bandWidth, Filter f) { return columnRep(bandWidth, new DomColorPosterizer(), f); }
+        public String columnDomColor(int bandWidth, Filter f, float minFrac) { return columnRep(bandWidth, new DomColorPosterizer(), f, minFrac); }
 
         // return a string representation of the most popular hue in each column-band of the image
         public String columnHue(int bandWidth) {
             return columnHue(bandWidth, null);
         }
-        public String columnHue(int bandWidth, Filter f) {
-            return columnRep(bandWidth, new HuePosterizer(), f);
-        }
+        public String columnHue(int bandWidth, Filter f) { return columnRep(bandWidth, new HuePosterizer(), f); }
+        public String columnHue(int bandWidth, Filter f, float minFrac) { return columnRep(bandWidth, new HuePosterizer(), f, minFrac); }
 
         // return a string representation of the average color in each column-band of the image, using
         // the given posterizer to reduce int RGB to enumerated colors and then optionally
@@ -595,6 +601,9 @@ public class CameraLib {
                 if (mHist[i] > mHist[mx])
                     mx = i;
             return mx;
+        }
+        public int count(int bin) {
+            return mHist[bin];
         }
     }
 

@@ -42,14 +42,16 @@ public class CameraTestOpVuforia extends OpMode {
     public void loop() {
 
         // test image access through Vuforia
-        Bitmap b = mVLib.getBitmap(4);
+        Bitmap b = mVLib.getBitmap(8);
         if (b != null) {
             CameraLib.CameraImage frame = new CameraLib.CameraImage(b);
             CameraLib.Size camSize = frame.cameraSize();
             telemetry.addData("Size", String.valueOf(camSize.width) + "x" + String.valueOf(camSize.height));
-            final int bandSize = 16;
-            telemetry.addData("hue columns", frame.columnHue(bandSize));
-            telemetry.addData("dom columns", frame.columnDomColor(bandSize));
+            final int bandSize = 4;         // width of each band of pixel columns below
+            final float minFrac = 0.4f;     // minimum fraction of pixels in band that needs to be of same color to mark it as "dominant"
+            telemetry.addData("hue columns", frame.columnHue(bandSize, null, minFrac));
+            telemetry.addData("dom columns", frame.columnDomColor(bandSize, null, minFrac));
+            /*
             telemetry.addData("hue a(1/3)", frame.scanlineHue(camSize.height / 3, bandSize));
             telemetry.addData("hue b(1/2)", frame.scanlineHue(camSize.height / 2, bandSize));
             telemetry.addData("hue c(2/3)", frame.scanlineHue(2*camSize.height / 3, bandSize));
@@ -59,6 +61,7 @@ public class CameraTestOpVuforia extends OpMode {
             telemetry.addData("centroid a(1/3)", frame.scanlineGray(camSize.height / 3).fCentroid());
             telemetry.addData("centroid b(1/2)", frame.scanlineGray(camSize.height / 2).fCentroid());
             telemetry.addData("centroid c(2/3)", frame.scanlineGray(2*camSize.height / 3).fCentroid());
+            */
         }
     }
 

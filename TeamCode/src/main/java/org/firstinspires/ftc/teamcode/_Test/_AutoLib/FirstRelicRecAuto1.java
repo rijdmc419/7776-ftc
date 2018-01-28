@@ -150,38 +150,27 @@ class GoToCryptoBoxGuideStep extends AutoLib.MotorGuideStep implements SetMark {
     ArrayList<ColumnHit> mPrevColumns;  // detected columns on previous pass
     float mPrevBinWidth;                // avg bin width on previous pass
 
-    SensorLib.PID mPid;                 // proportional–integral–derivative controller (PID controller)
-    double mPrevTime;                   // time of previous loop() call
-    ArrayList<AutoLib.SetPower> mMotorSteps;   // the motor steps we're guiding - assumed order is right ... left ...
-    float mPower;                       // base power setting for motors
-
     final int minDoneCount = 5;         // require "done" test to succeed this many consecutive times
     int mDoneCount;
 
     SetBitmap mSBM;                     // interface through which we tell the controlling opMode about our Bitmap so it can display it
     Paint mPaintRed, mPaintGreen;                       // used to draw info overlays on image
 
+    AutoLib.MotorGuideStep mMotorGuideStep;     // step used to actually control the motors based on directives from this step and gyro input
 
-    public GoToCryptoBoxGuideStep(OpMode opMode, SetBitmap sbm, VuforiaLib_FTC2017 VLib, String pattern, float power) {
+
+    public GoToCryptoBoxGuideStep(OpMode opMode, SetBitmap sbm, VuforiaLib_FTC2017 VLib, String pattern, AutoLib.MotorGuideStep motorGuideStep) {
         mOpMode = opMode;
         mCBColumn = 1;     // if we never get a cryptobox directive from Vuforia, go for the first bin
         mPattern = Pattern.compile(pattern);    // look for the given pattern of column colors
         mBlueFilter = new BlueFilter();
         mVLib = VLib;
-        mMotorSteps = null;     // this will be filled in by call from parent step
-        mPower = power;
+        mMotorGuideStep = motorGuideStep;
         mPrevColumns = null;
         mColumnOffset = 0;
         mDoneCount = 0;
         mSBM = sbm;
         mPrevBinWidth = 0;
-
-        // construct a default PID controller for correcting heading errors
-        final float Kp = 0.02f;        // degree heading proportional term correction per degree of deviation
-        final float Ki = 0.0f;         // ... integrator term
-        final float Kd = 0.0f;         // ... derivative term
-        final float KiCutoff = 3.0f;   // maximum angle error for which we update integrator
-        mPid = new SensorLib.PID(Kp, Ki, Kd, KiCutoff);
 
         // create stuff we'll use to draw debug info overlays on the image
         mPaintRed = new Paint();
@@ -210,16 +199,11 @@ class GoToCryptoBoxGuideStep extends AutoLib.MotorGuideStep implements SetMark {
     }
 
     public void set(ArrayList<AutoLib.SetPower> motorSteps){
-        mMotorSteps = motorSteps;
+        mMotorGuideStep.set(motorSteps);
     }
 
     public boolean loop() {
         super.loop();
-
-        // initialize previous-time on our first call -> dt will be zero on first call
-        if (firstLoopCall()) {
-            mPrevTime = mOpMode.getRuntime();           // use timer provided by OpMode
-        }
 
         mOpMode.telemetry.addData("VuMark", "%s found", mVuMarkString);
 
@@ -338,36 +322,14 @@ class GoToCryptoBoxGuideStep extends AutoLib.MotorGuideStep implements SetMark {
                 float error = (cameraTarget - (float)colString.length()/2.0f) / ((float)colString.length()/2.0f);
 
                 // compute motor correction from error through PID --
-                // for now, convert image-string error to angle and use standard "gyro" PID
-                double angError = Math.atan(error * tanCameraHalfFOV) * 180.0/Math.PI;
-
+                // for now, convert image-string error to angle --
+                // negate it because image coordinates are positive to the right but angles are positive to the left (CCW)
+                float angError = -(float)(Math.atan(error * tanCameraHalfFOV) * 180.0/Math.PI);
                 mOpMode.telemetry.addData("data", "target=%f  error=%f angError=%f", cameraTarget, error, angError);
 
-                // compute delta time since last call -- used for integration time of PID step
-                double time = mOpMode.getRuntime();
-                double dt = time - mPrevTime;
-                mPrevTime = time;
-
-                // feed error through PID to get motor power correction value
-                float correction = -mPid.loop((float)angError, (float)dt);
-
-                // compute new right/left motor powers
-                float rightPower = mPower + correction;
-                float leftPower = mPower - correction;
-
-                // normalize so neither has magnitude > 1
-                float norm = AutoLib.normalize(rightPower, leftPower);
-                rightPower *= norm;
-                leftPower *= norm;
-
-                // set the motor powers -- handle both time-based and encoder-based motor Steps
-                // assumed order is right motors followed by an equal number of left motors
-                int i = 0;
-                for (AutoLib.SetPower ms : mMotorSteps) {
-                    ms.setPower((i++ < mMotorSteps.size()/2) ? rightPower : leftPower);
-                }
-
-                mOpMode.telemetry.addData("motors", "left=%f right=%f", leftPower, rightPower);
+                // tell the subsidiary motor guide step which way to steer -- the heading (orientation) will either be
+                // constant (squirrely wheels) or change to match the direction, depending on the motor guide step we're given.
+                ((AutoLib.SetDirectionHeadingPower)mMotorGuideStep).setRelativeDirection(angError);
             }
             else
                 // the target column is not in the view -- if it's now to the "before" or "after" side of the frame
@@ -375,11 +337,13 @@ class GoToCryptoBoxGuideStep extends AutoLib.MotorGuideStep implements SetMark {
                 // normally this should not happen because we constantly steer for the target, but if
                 // steering is suppressed for some reason (like avoiding obstacles), it may.
             if (bTargetBefore){
-                // TBD ...
+                // e.g. move/turn hard left ... (depending on squirrely or normal drive)
+                ((AutoLib.SetDirectionHeadingPower)mMotorGuideStep).setRelativeDirection(90.0f);
             }
             else
             if (bTargetAfter){
-                // TBD ...
+                // e.g. move/turn hard right ...(depending on squirrely or normal drive)
+                ((AutoLib.SetDirectionHeadingPower)mMotorGuideStep).setRelativeDirection(-90.0f);
             }
 
             // when we're really close ...
@@ -387,10 +351,7 @@ class GoToCryptoBoxGuideStep extends AutoLib.MotorGuideStep implements SetMark {
                 // require completion test to pass some min number of times in a row to believe it
                 mDoneCount++;
                 if (mDoneCount >= minDoneCount) {
-                    // stop all the motors and return "done"
-                    for (AutoLib.SetPower ms : mMotorSteps) {
-                        ms.setPower(0.0);
-                    }
+                    // return "done" -- assume the next step will stop motors if needed
                     return true;
                 }
             }
@@ -477,7 +438,10 @@ public class FirstRelicRecAuto1 extends OpMode implements SetBitmap {
         mSequence = new AutoLib.LinearSequence();
         // make a step that guides the motion step by looking for a particular (red or blue) Cryptobox
         // it also implements the SetMark interface so VuforiaGetMarkStep can call it to tell which box to go for
-        AutoLib.MotorGuideStep guideStep  = new GoToCryptoBoxGuideStep(this, this, mVLib, bLookForBlue ? "^b+" : "^r+", 0.6f);
+        // and in this case, is given a SquirrelyGyroGuide step to give steering commands to.
+        AutoLib.MotorGuideStep guideStep  = new GoToCryptoBoxGuideStep(
+                this, this, mVLib, bLookForBlue ? "^b+" : "^r+",
+                new AutoLib.SquirrelyGyroGuideStep(this, 0, 0, mCorrGyro, null, null, 0.6f));
         // make and add to the sequence the step that looks for the Vuforia marker and sets the column (Left,Center,Right)
         // the motion terminator step should look for
         mSequence.add(new VuforiaGetMarkStep(this, mVLib, (SetMark)guideStep));

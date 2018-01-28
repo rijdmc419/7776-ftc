@@ -507,7 +507,8 @@ public class AutoLib {
     // used by interactive teleop modes to redirect a guide step from controller input
     // or e.g. by camera based guide steps to steer the robot to a target
     public interface SetDirectionHeadingPower {
-        public void setDirection(float direction);
+        public void setDirection(float direction);              // absolute
+        public void setRelativeDirection(float direction);      // relative to current orientation (heading)
         public void setHeading(float heading);
         public void setPower(float power);
     }
@@ -563,6 +564,7 @@ public class AutoLib {
         // used by interactive teleop modes to redirect the step from controller input
         // and by e.g. camera based guide steps to steer the robot to a target
         public void setDirection(float direction) { mDirection = direction; }
+        public void setRelativeDirection(float direction) { mDirection = mGyro.getHeading() + direction; }
         public void setHeading(float heading) { mDirection = heading; } // heading == direction for this guide step
         public void setPower(float power) { mPower = power; }
 
@@ -794,6 +796,7 @@ public class AutoLib {
         // used by interactive teleop modes to redirect the step from controller input
         // and by e.g. camera based guide steps to steer the robot to a target
         public void setDirection(float direction) { mDirection = direction; }
+        public void setRelativeDirection(float direction) { mDirection = mGyro.getHeading() + direction; }
         public void setHeading(float heading) { mHeading = heading; }
         public void setPower(float power) { mPower = power; }
 
@@ -888,6 +891,7 @@ public class AutoLib {
         // update target heading, and power --
         // used e.g. by interactive teleop modes to redirect the step from controller input
         public void setDirection(float direction) { ((GyroGuideStep)mSteps.get(0)).setDirection(direction); }
+        public void setRelativeDirection(float direction) { ((GyroGuideStep)mSteps.get(0)).setRelativeDirection(direction); }
         public void setHeading(float heading) { ((GyroGuideStep)mSteps.get(0)).setHeading(heading); }
         public void setPower(float power) { ((GyroGuideStep)mSteps.get(0)).setPower(power); }
     }
@@ -921,6 +925,7 @@ public class AutoLib {
         // update target direction, heading, and power --
         // used e.g. by interactive teleop modes to redirect the step from controller input
         public void setDirection(float direction) { ((GyroGuideStep)mSteps.get(0)).setDirection(direction); }
+        public void setRelativeDirection(float direction) { ((GyroGuideStep)mSteps.get(0)).setRelativeDirection(direction); }
         public void setHeading(float heading) { ((GyroGuideStep)mSteps.get(0)).setHeading(heading); }
         public void setPower(float power) { ((GyroGuideStep)mSteps.get(0)).setPower(power); }
 
@@ -962,6 +967,7 @@ public class AutoLib {
         // update target direction, heading, and power --
         // used e.g. by interactive teleop modes to redirect the step from controller input
         public void setDirection(float direction) { ((GyroGuideStep)mSteps.get(0)).setDirection(direction); }
+        public void setRelativeDirection(float direction) { ((GyroGuideStep)mSteps.get(0)).setRelativeDirection(direction); }
         public void setHeading(float heading) { ((GyroGuideStep)mSteps.get(0)).setHeading(heading); }
         public void setPower(float power) { ((GyroGuideStep)mSteps.get(0)).setPower(power); }
     }
@@ -993,6 +999,7 @@ public class AutoLib {
         // update target direction, heading, and power --
         // used e.g. by interactive teleop modes to redirect the step from controller input
         public void setDirection(float direction) { ((SquirrelyGyroGuideStep)mSteps.get(0)).setDirection(direction); }
+        public void setRelativeDirection(float direction) { ((GyroGuideStep)mSteps.get(0)).setRelativeDirection(direction); }
         public void setHeading(float heading) { ((SquirrelyGyroGuideStep)mSteps.get(0)).setHeading(heading); }
         public void setPower(float power) { ((SquirrelyGyroGuideStep)mSteps.get(0)).setPower(power); }
     }
@@ -1026,6 +1033,7 @@ public class AutoLib {
         // update target direction, heading, and power --
         // used e.g. by interactive teleop modes to redirect the step from controller input
         public void setDirection(float direction) { ((SquirrelyGyroGuideStep)mSteps.get(0)).setDirection(direction); }
+        public void setRelativeDirection(float direction) { ((GyroGuideStep)mSteps.get(0)).setRelativeDirection(direction); }
         public void setHeading(float heading) { ((SquirrelyGyroGuideStep)mSteps.get(0)).setHeading(heading); }
         public void setPower(float power) { ((SquirrelyGyroGuideStep)mSteps.get(0)).setPower(power); }
     }
@@ -1066,6 +1074,7 @@ public class AutoLib {
         // update target direction, heading, and power --
         // used e.g. by interactive teleop modes to redirect the step from controller input
         public void setDirection(float direction) { ((SquirrelyGyroGuideStep)mSteps.get(0)).setDirection(direction); }
+        public void setRelativeDirection(float direction) { ((GyroGuideStep)mSteps.get(0)).setRelativeDirection(direction); }
         public void setHeading(float heading) { ((SquirrelyGyroGuideStep)mSteps.get(0)).setHeading(heading); }
         public void setPower(float power) { ((SquirrelyGyroGuideStep)mSteps.get(0)).setPower(power); }
     }

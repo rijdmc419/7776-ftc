@@ -159,7 +159,6 @@ class GoToCryptoBoxGuideStep extends AutoLib.MotorGuideStep implements SetMark {
     int mDoneCount;
 
     SetBitmap mSBM;                     // interface through which we tell the controlling opMode about our Bitmap so it can display it
-
     Paint mPaintRed, mPaintGreen;                       // used to draw info overlays on image
 
 
@@ -315,7 +314,9 @@ class GoToCryptoBoxGuideStep extends AutoLib.MotorGuideStep implements SetMark {
             }
 
             // if we found some columns, try to correct course using their positions in the image
-            if (mCBColumn >= mColumnOffset && nCol > mCBColumn-mColumnOffset) {
+            boolean bTargetBefore = mCBColumn < mColumnOffset;
+            boolean bTargetAfter = mCBColumn-mColumnOffset >= nCol;
+            if (!bTargetBefore && !bTargetAfter) {
                 // the target column is in the view ...
 
                 // compute camera offset from near-side column of target bin (whichever side camera is to the block holder)
@@ -368,9 +369,16 @@ class GoToCryptoBoxGuideStep extends AutoLib.MotorGuideStep implements SetMark {
 
                 mOpMode.telemetry.addData("motors", "left=%f right=%f", leftPower, rightPower);
             }
-            else {
-                // the target column is not in the view -- it had to have been visible when we started,
-                // but it has since left the frame -- assume it's now to the left of the frame, so turn that way ...
+            else
+                // the target column is not in the view -- if it's now to the "before" or "after" side of the frame
+                // (i.e. when scanning left to right, to the left or right of the frame), turn that way ...
+                // normally this should not happen because we constantly steer for the target, but if
+                // steering is suppressed for some reason (like avoiding obstacles), it may.
+            if (bTargetBefore){
+                // TBD ...
+            }
+            else
+            if (bTargetAfter){
                 // TBD ...
             }
 

@@ -121,7 +121,7 @@ public class  AbsoluteGyroDrive1 extends OpMode {
 	@Override
 	public void loop() {
 
-		// motion direction is on the left stick
+		// motion direction and power is on the left stick
 		float dx = gamepad1.left_stick_x;
 		float dy = -gamepad1.left_stick_y;	// y is reversed :(
 
@@ -132,11 +132,12 @@ public class  AbsoluteGyroDrive1 extends OpMode {
 		final double MIN_INPUT = 0.1;
 		if (power > MIN_INPUT) {
 			// direction angle of stick >> the direction we want to move
-			double heading = Math.atan2(-dx, dy);    // stick angle: zero = +y, positive CCW, range +-pi
-			heading *= 180.0 / Math.PI;        // radians to degrees
+			double direction = Math.atan2(-dx, dy);    // stick angle: zero = +y, positive CCW, range +-pi
+			direction *= 180.0 / Math.PI;        // radians to degrees
 
 			// update the control step we're using to control the motors and then run it
-			mStep.set((float) heading, (float) power);
+			mStep.setDirection((float) direction);
+			mStep.setPower((float) power);
 		}
 		mStep.loop();
 	}

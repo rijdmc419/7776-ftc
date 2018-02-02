@@ -225,8 +225,9 @@ class GoToCryptoBoxGuideStep extends AutoLib.MotorGuideStep implements SetMark {
 
             // look for cryptobox columns
             // get unfiltered view of colors (hues) by full-image-height column bands
-            final int bandSize = 2;         // or try 1 for better resolution -- should be fast enough if image isn't too big
-            String colString = frame.columnHue(bandSize);
+            final int bandSize = 2;         // 1 has better resolution but tends to create multiple hits on one column
+            final float minFrac = 0.25f;     // minimum fraction of pixels in band that must be same color to mark it as a color
+            String colString = frame.columnDomColor(bandSize, null, minFrac);
 
             // log debug info iff it fits on one line of the DS display ...
             if (colString.length() <= 25)
@@ -297,6 +298,9 @@ class GoToCryptoBoxGuideStep extends AutoLib.MotorGuideStep implements SetMark {
                 mOpMode.telemetry.addData("distance (in)", distance);
             }
 
+            // show target point on image
+            canvas.drawLine(bitmap.getWidth()/2-5, 15, bitmap.getWidth()/2+5, 15, mPaintGreen);
+
             // if we found some columns, try to correct course using their positions in the image
             boolean bTargetBefore = mCBColumn < mColumnOffset;
             boolean bTargetAfter = mCBColumn-mColumnOffset >= nCol;
@@ -308,13 +312,10 @@ class GoToCryptoBoxGuideStep extends AutoLib.MotorGuideStep implements SetMark {
                 // camera target is center of target column + camera offset in image-string space
                 float cameraTarget = columns.get(mCBColumn-mColumnOffset).mid() + cameraBinOffset;
 
-                // show target point and camera center on image
-                {
-                    canvas.drawLine(bitmap.getWidth()/2-5, 15, bitmap.getWidth()/2+5, 15, mPaintGreen);
-                    float x = cameraTarget*bandSize;
-                    if (x>=0 && x<bitmap.getWidth())
-                        canvas.drawLine(x, 10, x, 20, mPaintGreen);
-                }
+                // show target point if it's in the current image
+                float x = cameraTarget*bandSize;
+                if (x>=0 && x<bitmap.getWidth())
+                    canvas.drawLine(x, 10, x, 20, mPaintGreen);
 
                 // the above computed target point should be in the middle of the image if we're on course -
                 // if not, correct our course to center it --
@@ -379,6 +380,35 @@ class GoToCryptoBoxGuideStep extends AutoLib.MotorGuideStep implements SetMark {
     }
 }
 
+// dummy drive step for debug mode where we don't have motors or gyros
+class MotorLogStep extends AutoLib.MotorGuideStep implements AutoLib.SetDirectionHeadingPower {
+    OpMode mOpMode;
+
+    public MotorLogStep(OpMode opmode) {
+        mOpMode = opmode;
+    }
+
+    public void setDirection(float direction)              // absolute
+    {
+        mOpMode.telemetry.addData("setDirection", direction);
+    }
+    public void setRelativeDirection(float direction)      // relative to current orientation (heading)
+    {
+        mOpMode.telemetry.addData("setRelativeDirection", direction);
+    }
+    public void setHeading(float heading)
+    {
+        mOpMode.telemetry.addData("setHeading", heading);
+    }
+    public void setPower(float power)
+    {
+        mOpMode.telemetry.addData("setPower", power);
+    }
+
+    public boolean loop() {
+        return false;
+    }
+}
 
 //@Autonomous(name="FirstRelicRecAuto1", group ="Auto")
 //@Disabled
@@ -436,12 +466,16 @@ public class FirstRelicRecAuto1 extends OpMode implements SetBitmap {
 
         // create the root Sequence for this autonomous OpMode
         mSequence = new AutoLib.LinearSequence();
+        // make a step that will steer the robot given guidance from the GoToCryptoBoxGuideStep
+        // this can be a gyro-stabilized squirrely wheel steering step or just a debug logging step
+        AutoLib.MotorGuideStep motorGuideStep = debug ?
+                    new MotorLogStep(this) :
+                    new AutoLib.SquirrelyGyroGuideStep(this, 0, 0, mCorrGyro, null, null, 0.6f);
         // make a step that guides the motion step by looking for a particular (red or blue) Cryptobox
         // it also implements the SetMark interface so VuforiaGetMarkStep can call it to tell which box to go for
         // and in this case, is given a SquirrelyGyroGuide step to give steering commands to.
         AutoLib.MotorGuideStep guideStep  = new GoToCryptoBoxGuideStep(
-                this, this, mVLib, bLookForBlue ? "^b+" : "^r+",
-                new AutoLib.SquirrelyGyroGuideStep(this, 0, 0, mCorrGyro, null, null, 0.6f));
+                this, this, mVLib, bLookForBlue ? "^b+" : "^r+", motorGuideStep);
         // make and add to the sequence the step that looks for the Vuforia marker and sets the column (Left,Center,Right)
         // the motion terminator step should look for
         mSequence.add(new VuforiaGetMarkStep(this, mVLib, (SetMark)guideStep));

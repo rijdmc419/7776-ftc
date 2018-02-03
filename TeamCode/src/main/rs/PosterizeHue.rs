@@ -6,6 +6,7 @@
 // mapping kernel that posterizes an image in RGB565 format to a small set of saturated hues
 
 // RenderScript kernel that performs RGB2HSV conversion
+#if 0
 uchar3 RS_KERNEL hsv(uchar3 in)
 {
     uchar3 tempP;
@@ -62,6 +63,7 @@ uchar3 RS_KERNEL hsv(uchar3 in)
 
     return tempP;
 }
+#endif
 
 int RS_KERNEL red(uchar3 pix) { return pix.r; }
 int RS_KERNEL green(uchar3 pix) { return pix.g; }
@@ -76,17 +78,17 @@ uchar3 RS_KERNEL toU3(int pix) {
 }
 
 uchar3 RS_KERNEL domColor(uchar3 pix) {
-            float n = 1.25F;    // dominance factor threshold
+            float n = 1.5F;    // dominance factor threshold
             uchar3 white = toU3(0xFFFFFF);
             uchar3 domClr = white;    // default is white (i.e. shades of gray)
             if (red(pix)>n*green(pix) && red(pix)>n*blue(pix))
                 domClr = toU3(0xFF0000);     // red
             else
+             if (blue(pix)>n*red(pix) && blue(pix)>n*green(pix))
+                 domClr = toU3(0x0000FF);     // blue
+/*          else
             if (green(pix)>n*red(pix) && green(pix)>n*blue(pix))
                 domClr = toU3(0x00FF00);     // green
-            else
-            if (blue(pix)>n*red(pix) && blue(pix)>n*green(pix))
-                domClr = toU3(0x0000FF);     // blue
             else
             if (blue(pix)>n*red(pix) && green(pix)>n*red(pix))
                 domClr = toU3(0x00FFFF);     // cyan
@@ -96,6 +98,7 @@ uchar3 RS_KERNEL domColor(uchar3 pix) {
             else
             if (red(pix)>n*blue(pix) && green(pix)>n*blue(pix))
                 domClr = toU3(0xFFFF00);     // yellow
+*/
             // if it has no discernible hue, encode its gray level 0-7
             if (domClr.r == white.r && domClr.g == white.g && domClr.b == white.b) {
                 float value = red(pix)*0.2f + green(pix)*0.7f + blue(pix)*0.1f; // 0..255

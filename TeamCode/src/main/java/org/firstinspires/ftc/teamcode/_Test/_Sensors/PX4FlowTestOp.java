@@ -17,7 +17,8 @@ import org.firstinspires.ftc.teamcode._Libs.PX4Flow;
 public class PX4FlowTestOp extends OpMode {
 
     private PX4Flow mSensor;
-    private View mRelativeLayout;
+    private int x;
+    private int y;
 
     public PX4FlowTestOp() {
     }
@@ -31,11 +32,23 @@ public class PX4FlowTestOp extends OpMode {
         // read current integrated data from sensor
         mSensor.readIntegral();
 
+        // accumulate incremental dx, dy
+        int dx = mSensor.pixel_flow_x_integral();
+        int dy = mSensor.pixel_flow_y_integral();
+        x += dx;
+        y += dy;
+
         // log data to DriverStation
         telemetry.addData("count", mSensor.frame_count_since_last_readout());
-        telemetry.addData("dx", mSensor.pixel_flow_x_integral());
-        telemetry.addData("dy", mSensor.pixel_flow_y_integral());
+        telemetry.addData("dx", dx);
+        telemetry.addData("dy", dy);
+        telemetry.addData("x", x);
+        telemetry.addData("y", y);
+        //telemetry.addData("gyro dx", mSensor.gyro_x_rate_integral());
+        //telemetry.addData("gyro dy", mSensor.gyro_y_rate_integral());
+        //telemetry.addData("gyro dz", mSensor.gyro_z_rate_integral());
         telemetry.addData("quality", mSensor.quality_integral());
+        telemetry.addData("time", mSensor.integration_timespan());
     }
 
     public void stop() {}

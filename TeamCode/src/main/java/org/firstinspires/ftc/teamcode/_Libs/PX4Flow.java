@@ -60,14 +60,19 @@ class px4_integral_frame
     public int   sonar_timestamp;// time since last sonar update [microseconds]
     public short ground_distance;// Ground distance in meters*1000 [meters*1000]
     public short gyro_temperature;// Temperature * 100 in centi-degrees Celsius [degcelsius*100]
-    public byte  quality;// averaged quality of accumulated flow values [0:bad quality;255: max quality]
+    public short quality;// averaged quality of accumulated flow values [0:bad quality;255: max quality]
 
     public px4_integral_frame(byte[] b) {
         ByteBuffer buf = ByteBuffer.wrap(b);
         frame_count_since_last_readout = buf.getShort(0);
         pixel_flow_x_integral = buf.getShort(2);
         pixel_flow_y_integral = buf.getShort(4);
-        quality = buf.get(24);
+        gyro_x_rate_integral = buf.getShort(6);
+        gyro_y_rate_integral = buf.getShort(8);
+        gyro_z_rate_integral = buf.getShort(10);
+        integration_timespan = buf.getInt(12);
+        byte q = buf.get(24);
+        quality = (short)(q & 0xff);     // treat as unsigned byte
     }
 } 
 
@@ -151,7 +156,7 @@ public class PX4Flow {
     public short qual() {
         return frame.qual;
     }
-    public byte sonar_timestamp() {
+    public short sonar_timestamp() {
         return frame.sonar_timestamp;
     }
     public short ground_distance() {
@@ -187,8 +192,6 @@ public class PX4Flow {
     public short gyro_temperature() {
         return iframe.gyro_temperature;
     }
-    public byte quality_integral() {
-        return iframe.quality;
-    }
+    public short quality_integral() { return iframe.quality; }
 
 }

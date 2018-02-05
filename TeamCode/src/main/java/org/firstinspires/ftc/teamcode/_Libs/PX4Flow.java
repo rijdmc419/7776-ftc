@@ -25,6 +25,7 @@ import com.qualcomm.robotcore.hardware.I2cDeviceSynch;
 import com.qualcomm.robotcore.hardware.I2cDeviceSynchImpl;
 
 import java.nio.ByteBuffer;
+import java.nio.ByteOrder;
 
 
 class px4_frame
@@ -44,6 +45,7 @@ class px4_frame
 
     public px4_frame(byte[] b) {
         ByteBuffer buf = ByteBuffer.wrap(b);
+        buf.order(ByteOrder.LITTLE_ENDIAN);         // registers are read LSB, MSB
         frame_count = buf.getShort(0);
     }
 }
@@ -64,6 +66,7 @@ class px4_integral_frame
 
     public px4_integral_frame(byte[] b) {
         ByteBuffer buf = ByteBuffer.wrap(b);
+        buf.order(ByteOrder.LITTLE_ENDIAN);         // registers are read LSB, MSB
         frame_count_since_last_readout = buf.getShort(0);
         pixel_flow_x_integral = buf.getShort(2);
         pixel_flow_y_integral = buf.getShort(4);

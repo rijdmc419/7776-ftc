@@ -35,7 +35,7 @@ class px4_frame
     public short pixel_flow_y_sum;// accumulated y flow in pixels*10 since last I2C frame
     public short flow_comp_m_x;// x velocity*1000 in meters / timestep
     public short flow_comp_m_y;// y velocity*1000 in meters / timestep
-    public short qual;// Optical flow quality / confidence 0: bad, 255: maximum quality
+    public short quality;// Optical flow quality / confidence 0: bad, 255: maximum quality
     public short gyro_x_rate; //gyro x rate
     public short gyro_y_rate; //gyro y rate
     public short gyro_z_rate; //gyro z rate
@@ -47,6 +47,10 @@ class px4_frame
         ByteBuffer buf = ByteBuffer.wrap(b);
         buf.order(ByteOrder.LITTLE_ENDIAN);         // registers are read LSB, MSB
         frame_count = buf.getShort(0);
+        pixel_flow_x_sum = buf.getShort(2);
+        pixel_flow_y_sum = buf.getShort(4);
+        byte q = buf.get(10);
+        quality = (short)(q & 0xff);     // treat as unsigned byte
     }
 }
 
@@ -156,8 +160,8 @@ public class PX4Flow {
     public short gyro_z_rate() {
         return frame.gyro_z_rate;
     }
-    public short qual() {
-        return frame.qual;
+    public short quality() {
+        return frame.quality;
     }
     public short sonar_timestamp() {
         return frame.sonar_timestamp;

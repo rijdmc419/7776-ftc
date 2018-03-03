@@ -381,7 +381,7 @@ public class AutoLib {
                 // set up the motor on our first call
                 mMotor.setMode(DcMotor.RunMode.RUN_TO_POSITION);
                 mMotor.setTargetPosition(mMotor.getCurrentPosition() + mEncoderCount);
-                mMotor.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.FLOAT);
+                mMotor.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
                 mMotor.setPower(mPower);
             }
 

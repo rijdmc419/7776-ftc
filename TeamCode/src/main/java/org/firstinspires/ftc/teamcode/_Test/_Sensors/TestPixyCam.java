@@ -13,8 +13,6 @@ public class TestPixyCam extends OpMode
 {
 
     PixyCam pixyCam;
-    PixyCam.Block block1;
-    PixyCam.Block block2;
     ElapsedTime elapsedTime = new ElapsedTime();
 
     /*
@@ -34,13 +32,18 @@ public class TestPixyCam extends OpMode
     @Override
     public void loop()
     {
-        if (elapsedTime.milliseconds() > 100) // Update every tenth of a second.
+        // if (elapsedTime.milliseconds() > 33) // Update every 1/30 of a second.
         {
+            telemetry.addData("dt(millisec):", elapsedTime.milliseconds());
             elapsedTime.reset();
-            block1 = pixyCam.GetBiggestBlock(1);
+            PixyCam.Block block1 = pixyCam.GetBiggestBlock(1);
             telemetry.addData("Block 1:", block1.toString());
-            block2 = pixyCam.GetBiggestBlock(2);
+            PixyCam.Block block2 = pixyCam.GetBiggestBlock(2);
             telemetry.addData("Block 2:", block2.toString());
+            PixyCam.Block block3 = pixyCam.GetBiggestBlock(3);
+            telemetry.addData("Block 3:", block3.toString());
+            PixyCam.Block block4 = pixyCam.GetBiggestBlock(4);
+            telemetry.addData("Block 4:", block4.toString());
         }
     }
 }

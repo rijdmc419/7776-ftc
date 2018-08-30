@@ -6,9 +6,40 @@ import com.qualcomm.robotcore.hardware.I2cDeviceSynchDevice;
 import com.qualcomm.robotcore.hardware.configuration.I2cSensor;
 import com.qualcomm.robotcore.util.TypeConversion;
 
+import java.util.ArrayList;
+
+import static org.firstinspires.ftc.teamcode._Libs.PixyCam.BlockType.CC_BLOCK;
+import static org.firstinspires.ftc.teamcode._Libs.PixyCam.BlockType.NORMAL_BLOCK;
+import static org.firstinspires.ftc.teamcode._Libs.PixyCam.BlockType.NO_START_CODE;
+
+// device driver for PixyCam running normal streaming I2C protocol
+// which should return multiple blocks of the same color if that's what's seen.
+// see http://cmucam.org/projects/cmucam5/wiki/Porting_Guide
+// TBD -- rewrite this code to actually do that ...
+
 @I2cSensor(name = "PixyCam", description = "PixyCam", xmlTag = "PixyCam")
 public class PixyCam extends I2cDeviceSynchDevice<I2cDeviceSynch>
 {
+    final int PIXY_ARRAYSIZE  =            100;
+    final int PIXY_START_WORD    =         0xaa55;
+    final int PIXY_START_WORD_CC   =       0xaa56;
+    final int PIXY_START_WORDX    =        0x55aa;
+    final int PIXY_SERVO_SYNC     =        0xff;
+    final int PIXY_CAM_BRIGHTNESS_SYNC  =  0xfe;
+    final int PIXY_LED_SYNC      =         0xfd;
+    final int PIXY_OUTBUF_SIZE  =          64;
+    final int PIXY_SYNC_BYTE     =         0x5a;
+    final int PIXY_SYNC_BYTE_DATA   =      0x5b;
+
+    // data types
+    enum BlockType
+    {
+        NO_START_CODE,
+        NORMAL_BLOCK,
+        CC_BLOCK // color code block
+    }
+
+
     /**
      * Block describes the signature, location, and size of a detected block.
      */
@@ -37,83 +68,145 @@ public class PixyCam extends I2cDeviceSynchDevice<I2cDeviceSynch>
          */
         public final int width, height;
 
-        public Block(int signature, byte x, byte y, byte width, byte height)
+        public Block(int signature, int x, int y, int width, int height)
         {
             this.signature = signature;
-            this.x = TypeConversion.unsignedByteToInt(x);
-            this.y = TypeConversion.unsignedByteToInt(y);
-            this.width = TypeConversion.unsignedByteToInt(width);
-            this.height = TypeConversion.unsignedByteToInt(height);
+            this.x = x;
+            this.y = y;
+            this.width = width;
+            this.height = height;
         }
 
         @Override public String toString()
         {
             return String.format("x: %d, y: %d, w: %d, h: %d", this.x, this.y, this.width, this.height);
         }
+
+        public int checksum() {
+            return signature+x+y+width+height;
+        }
     }
 
+    int g_skipStart = 0;
+    BlockType g_blockType;
+    ArrayList<Block> g_blocks;
+
     /**
-     * The ReadWindow used to do a PixyCam LEGO protocol GeneralQuery
+     * The ReadWindow used to do a PixyCam I2C protocol GeneralQuery
      */
     private I2cDeviceSynch.ReadWindow legoProtocolGeneralQueryReadWindow;
-    /**
-     * The ReadWindows used to do the PixyCam LEGO protocol SignatureQuery.
-     */
-    private I2cDeviceSynch.ReadWindow [] legoProtocolSignatureQueryReadWindows;
+
 
     public PixyCam(I2cDeviceSynch deviceSynch)
     {
         super(deviceSynch, true);
 
-        this.legoProtocolGeneralQueryReadWindow = new I2cDeviceSynch.ReadWindow(0x50, 6, I2cDeviceSynch.ReadMode.ONLY_ONCE);
-        this.legoProtocolSignatureQueryReadWindows = new I2cDeviceSynch.ReadWindow[7];
-        for (int i = 1; i <= 7; i++)
-            this.legoProtocolSignatureQueryReadWindows[i-1] = NewLegoProtocolSignatureQueryReadWindow(i);
+        this.legoProtocolGeneralQueryReadWindow = new I2cDeviceSynch.ReadWindow(0x0, 1, I2cDeviceSynch.ReadMode.ONLY_ONCE);
 
         super.registerArmingStateCallback(false);
         this.deviceClient.setI2cAddress(I2cAddr.create7bit(1));
         this.deviceClient.engage();
     }
 
-    private I2cDeviceSynch.ReadWindow NewLegoProtocolSignatureQueryReadWindow(int signature)
-    {
-        return new I2cDeviceSynch.ReadWindow(0x50 + signature, 5, I2cDeviceSynch.ReadMode.ONLY_ONCE);
+
+    private byte getByte() {
+        return this.deviceClient.read8(0x50);
     }
 
-    private byte [] ReadEntireWindow(I2cDeviceSynch.ReadWindow readWindow)
+    private int getWord()
     {
-        this.deviceClient.setReadWindow(readWindow);
-        return this.deviceClient.read(readWindow.getRegisterFirst(), readWindow.getRegisterCount());
+        // this routine assumes little endian
+        byte c = getByte();
+        int w = getByte();
+        w <<= 8;
+        w |= c;
+        return w;
     }
 
-    /***
-     *
-     * @return a Block object containing details about the location of the largest detected block
-     */
-    public Block GetBiggestBlock()
+    BlockType getStart()
     {
-        byte [] buffer = ReadEntireWindow(this.legoProtocolGeneralQueryReadWindow);
+        int w, lastw;
+        lastw = 0xffff;
 
-        int signature = buffer[1] << 8 | buffer[0];
-
-        return new Block(signature, buffer[2], buffer[3], buffer[4], buffer[5]);
+        while(true)
+        {
+            w = getWord();
+            if (w==0 && lastw==0) {
+                return NO_START_CODE; // no start code
+            }
+            else if (w==PIXY_START_WORD && lastw==PIXY_START_WORD)
+            {
+                return NORMAL_BLOCK;
+            }
+            else if (w==PIXY_START_WORD_CC && lastw==PIXY_START_WORD)
+            {
+                return CC_BLOCK; // found color code block
+            }
+            else if (w==PIXY_START_WORDX)
+            {
+                getByte(); // we're out of sync! (backwards)
+            }
+            lastw = w;
+        }
     }
 
-    /**
-     *
-     * @param signature is a value between 1 and 7 corresponding to the signature trained into the PixyCam.
-     * @return a Block object containing details about the location of the largest detected block for the specified signature.
-     */
-    public Block GetBiggestBlock(int signature)
+    public int getBlocks(int maxBlocks)
     {
-        if (signature < 1 || signature > 7)
-            throw new IllegalArgumentException("signature must be between 1 and 7");
+        ArrayList<Block> blocks;
+        int w, blockCount, checksum, sum;
 
-        byte [] buffer = ReadEntireWindow(this.legoProtocolSignatureQueryReadWindows[signature - 1]);
+        if (g_skipStart == 0)
+        {
+            if (getStart()==NO_START_CODE)
+                return -1;
+        }
+        else
+            g_skipStart = 0;
 
-        return new Block(signature, buffer[1], buffer[2], buffer[3], buffer[4]);
+        // make result array
+        g_blocks = new ArrayList<Block>();
+
+        for(blockCount=0; blockCount<maxBlocks; blockCount++)
+        {
+            checksum = getWord();
+            if (checksum==PIXY_START_WORD) // we've reached the beginning of the next frame
+            {
+                g_skipStart = 1;
+                g_blockType = NORMAL_BLOCK;
+                return blockCount;
+            }
+            else if (checksum==PIXY_START_WORD_CC)
+            {
+                g_skipStart = 1;
+                g_blockType = CC_BLOCK;
+                return blockCount;
+            }
+            else if (checksum==0)
+                return blockCount;
+
+            Block b = new Block(getWord(), getWord(), getWord(), getWord(), getWord());
+            g_blocks.add(b);
+
+            // check checksum
+            if (checksum==b.checksum())
+                blockCount++;
+            else
+                return -2; //checksum error!
+
+            w = getWord();
+            if (w==PIXY_START_WORD)
+                g_blockType = NORMAL_BLOCK;
+            else if (w==PIXY_START_WORD_CC)
+                g_blockType = CC_BLOCK;
+            else
+                return blockCount;
+        }
+        return blockCount;
     }
 
+    public ArrayList<Block> getBlocks() {
+        return g_blocks;
+    }
 
     @Override
     protected boolean doInitialize() {

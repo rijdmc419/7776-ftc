@@ -6,7 +6,13 @@ import org.firstinspires.ftc.teamcode._Libs.PixyCam;
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
 import com.qualcomm.robotcore.util.ElapsedTime;
 
+import java.util.ArrayList;
+
 import static android.R.attr.rotation;
+
+// test program for PixyCam running normal streaming I2C protocol
+// which should return multiple blocks of the same color if that's what's seen.
+// TBD -- rewrite this code to actually do that ...
 
 @TeleOp(name="TestPixyCam")
 public class TestPixyCam extends OpMode
@@ -36,14 +42,11 @@ public class TestPixyCam extends OpMode
         {
             telemetry.addData("dt(millisec):", elapsedTime.milliseconds());
             elapsedTime.reset();
-            PixyCam.Block block1 = pixyCam.GetBiggestBlock(1);
-            telemetry.addData("Block 1:", block1.toString());
-            PixyCam.Block block2 = pixyCam.GetBiggestBlock(2);
-            telemetry.addData("Block 2:", block2.toString());
-            PixyCam.Block block3 = pixyCam.GetBiggestBlock(3);
-            telemetry.addData("Block 3:", block3.toString());
-            PixyCam.Block block4 = pixyCam.GetBiggestBlock(4);
-            telemetry.addData("Block 4:", block4.toString());
+            int count = pixyCam.getBlocks(100);
+            telemetry.addData("numBlocks or error code", count);
+            ArrayList<PixyCam.Block> blocks = pixyCam.getBlocks();
+            for (PixyCam.Block b : blocks)
+                telemetry.addData("Block", b.toString());
         }
     }
 }

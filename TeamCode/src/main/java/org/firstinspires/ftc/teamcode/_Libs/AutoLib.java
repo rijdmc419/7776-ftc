@@ -381,7 +381,7 @@ public class AutoLib {
                 // set up the motor on our first call
                 mMotor.setMode(DcMotor.RunMode.RUN_TO_POSITION);
                 mMotor.setTargetPosition(mMotor.getCurrentPosition() + mEncoderCount);
-                mMotor.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.FLOAT);
+                mMotor.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
                 mMotor.setPower(mPower);
             }
 
@@ -503,13 +503,23 @@ public class AutoLib {
         public void set(ArrayList<AutoLib.SetPower> motorsteps){}
     }
 
+    // update target direction, heading, and power --
+    // used by interactive teleop modes to redirect a guide step from controller input
+    // or e.g. by camera based guide steps to steer the robot to a target
+    public interface SetDirectionHeadingPower {
+        public void setDirection(float direction);              // absolute
+        public void setRelativeDirection(float direction);      // relative to current orientation (heading)
+        public void setHeading(float heading);
+        public void setPower(float power);
+    }
+
 
     // a Step that provides gyro-based guidance to motors controlled by other concurrent Steps (e.g. encoder or time-based)
     // assumes an even number of concurrent drive motor steps in order right ..., left ...
     // this step tries to keep the robot on the given course by adjusting the left vs. right motors to change the robot's heading.
-    static public class GyroGuideStep extends MotorGuideStep {
+    static public class GyroGuideStep extends MotorGuideStep implements SetDirectionHeadingPower {
         private float mPower;                               // basic power setting of all 4 motors -- adjusted for steering along path
-        private float mHeading;                             // compass heading to steer for (-180 .. +180 degrees)
+        private float mDirection;                           // absolute direction along which the robot should move (0 ahead; positive CCW)
         private OpMode mOpMode;                             // needed so we can log output (may be null)
         private HeadingSensor mGyro;                        // sensor to use for heading information (e.g. Gyro or Vuforia)
         private SensorLib.PID mPid;                         // proportional–integral–derivative controller (PID controller)
@@ -517,11 +527,11 @@ public class AutoLib {
         private ArrayList<SetPower> mMotorSteps;            // the motor steps we're guiding - assumed order is right ... left ...
         private float mMaxPower;                            // max allowed power including direction correction
 
-        public GyroGuideStep(OpMode mode, float heading, HeadingSensor gyro, SensorLib.PID pid,
+        public GyroGuideStep(OpMode mode, float direction, HeadingSensor gyro, SensorLib.PID pid,
                              ArrayList<SetPower> motorsteps, float power)
         {
             mOpMode = mode;
-            mHeading = heading;
+            mDirection = direction;
             mGyro = gyro;
             if (pid != null)
                 mPid = pid;     // client is supplying PID controller for correcting heading errors
@@ -550,6 +560,14 @@ public class AutoLib {
             mMotorSteps = motorsteps;
         }
 
+        // update target direction, heading, and power --
+        // used by interactive teleop modes to redirect the step from controller input
+        // and by e.g. camera based guide steps to steer the robot to a target
+        public void setDirection(float direction) { mDirection = direction; }
+        public void setRelativeDirection(float direction) { mDirection = mGyro.getHeading() + direction; }
+        public void setHeading(float heading) { mDirection = heading; } // heading == direction for this guide step
+        public void setPower(float power) { mPower = power; }
+
         public boolean loop()
         {
             super.loop();
@@ -562,7 +580,7 @@ public class AutoLib {
             float heading = mGyro.getHeading();     // get latest reading from direction sensor
             // convention is positive angles CCW, wrapping from 359-0
 
-            float error = SensorLib.Utils.wrapAngle(heading-mHeading);   // deviation from desired heading
+            float error = SensorLib.Utils.wrapAngle(heading-mDirection);   // deviation from desired heading
             // deviations to left are positive, to right are negative
 
             // compute delta time since last call -- used for integration time of PID step
@@ -599,13 +617,6 @@ public class AutoLib {
             // guidance step always returns "done" so the CS in which it is embedded completes when
             // all the motors it's controlling are done
             return true;
-        }
-
-        // update target direction, heading, and power --
-        // used by interactive teleop modes to redirect the step from controller input
-        public void set(float heading,float power) {
-            mHeading = heading;
-            mPower = power;
         }
 
     }
@@ -738,7 +749,7 @@ public class AutoLib {
     // assumes 4 concurrent drive motor steps in order right front, right back, left front, left back.
     // this step tries to maintain the robot's absolute orientation (heading) given by the gyro by adjusting the left vs. right motors
     // while the front vs. back power is adjusted to translate in the desired absolute direction.
-    static public class SquirrelyGyroGuideStep extends AutoLib.MotorGuideStep {
+    static public class SquirrelyGyroGuideStep extends AutoLib.MotorGuideStep implements SetDirectionHeadingPower {
         private float mPower;                               // basic power setting of all 4 motors -- adjusted for steering along path
         private float mDirection;                           // absolute direction along which the robot should move (0 ahead; positive CCW)
         private float mHeading;                             // absolute orientation the robot should maintain while moving
@@ -783,12 +794,11 @@ public class AutoLib {
 
         // update target direction, heading, and power --
         // used by interactive teleop modes to redirect the step from controller input
-        public void set(float direction, float heading,float power)
-        {
-            mDirection = direction;
-            mHeading = heading;
-            mPower = power;
-        }
+        // and by e.g. camera based guide steps to steer the robot to a target
+        public void setDirection(float direction) { mDirection = direction; }
+        public void setRelativeDirection(float direction) { mDirection = mGyro.getHeading() + direction; }
+        public void setHeading(float heading) { mHeading = heading; }
+        public void setPower(float power) { mPower = power; }
 
         public boolean loop()
         {
@@ -855,7 +865,7 @@ public class AutoLib {
     // a Step that uses gyro input to drive along a given course for a given time.
     // uses a GyroGuideStep to adjust power to 2 or 4 motors.
     // assumes a robot with up to 4 drive motors in assumed order right motors, left motors
-    static public class AzimuthTimedDriveStep extends ConcurrentSequence {
+    static public class AzimuthTimedDriveStep extends ConcurrentSequence implements SetDirectionHeadingPower {
 
         public AzimuthTimedDriveStep(OpMode mode, float heading, HeadingSensor gyro, SensorLib.PID pid,
                                      DcMotor motors[], float power, float time, boolean stop)
@@ -878,17 +888,18 @@ public class AutoLib {
         // the base class loop function does all we need -- it will return "done" when
         // all the motors are done.
 
-        // update target direction, heading, and power --
-        // used by interactive teleop modes to redirect the step from controller input
-        public void set(float heading,float power) {
-            ((GyroGuideStep)mSteps.get(0)).set(heading, power);
-        }
+        // update target heading, and power --
+        // used e.g. by interactive teleop modes to redirect the step from controller input
+        public void setDirection(float direction) { ((GyroGuideStep)mSteps.get(0)).setDirection(direction); }
+        public void setRelativeDirection(float direction) { ((GyroGuideStep)mSteps.get(0)).setRelativeDirection(direction); }
+        public void setHeading(float heading) { ((GyroGuideStep)mSteps.get(0)).setHeading(heading); }
+        public void setPower(float power) { ((GyroGuideStep)mSteps.get(0)).setPower(power); }
     }
 
     // a Step that uses gyro input to drive along a given course for a given distance given by motor encoders.
     // uses a GyroGuideStep to adjust power to 2 or 4 motors.
     // assumes a robot with up to 4 drive motors in assumed order right motors, left motors
-    static public class AzimuthCountedDriveStep extends ConcurrentSequence {
+    static public class AzimuthCountedDriveStep extends ConcurrentSequence implements SetDirectionHeadingPower {
 
         public AzimuthCountedDriveStep(OpMode mode, float heading, HeadingSensor gyro, SensorLib.PID pid,
                                        DcMotor motors[], float power, int count, boolean stop)
@@ -912,17 +923,19 @@ public class AutoLib {
         // all the motors are done.
 
         // update target direction, heading, and power --
-        // used by interactive teleop modes to redirect the step from controller input
-        public void set(float heading,float power) {
-            ((GyroGuideStep)mSteps.get(0)).set(heading, power);
-        }
+        // used e.g. by interactive teleop modes to redirect the step from controller input
+        public void setDirection(float direction) { ((GyroGuideStep)mSteps.get(0)).setDirection(direction); }
+        public void setRelativeDirection(float direction) { ((GyroGuideStep)mSteps.get(0)).setRelativeDirection(direction); }
+        public void setHeading(float heading) { ((GyroGuideStep)mSteps.get(0)).setHeading(heading); }
+        public void setPower(float power) { ((GyroGuideStep)mSteps.get(0)).setPower(power); }
+
     }
 
     // a Step that uses gyro input to drive along a given course until the given DistanceSensor
     // reports that we are within a given distance of some target.
     // uses a GyroGuideStep to adjust power to 2 or 4 motors.
     // assumes a robot with up to 4 drive motors in assumed order right motors, left motors
-    static public class AzimuthDistanceDriveStep extends ConcurrentSequence {
+    static public class AzimuthDistanceDriveStep extends ConcurrentSequence implements SetDirectionHeadingPower {
 
         public AzimuthDistanceDriveStep(OpMode mode, float heading, HeadingSensor gyro, SensorLib.PID pid,
                                      DcMotor motors[], float power, DistanceSensor ds, float distance)
@@ -951,12 +964,18 @@ public class AutoLib {
         // the base class loop function does all we need -- it will return "done" when
         // all the motors are done.
 
+        // update target direction, heading, and power --
+        // used e.g. by interactive teleop modes to redirect the step from controller input
+        public void setDirection(float direction) { ((GyroGuideStep)mSteps.get(0)).setDirection(direction); }
+        public void setRelativeDirection(float direction) { ((GyroGuideStep)mSteps.get(0)).setRelativeDirection(direction); }
+        public void setHeading(float heading) { ((GyroGuideStep)mSteps.get(0)).setHeading(heading); }
+        public void setPower(float power) { ((GyroGuideStep)mSteps.get(0)).setPower(power); }
     }
 
     // a Step that uses gyro input to stabilize the robot orientation while driving along a given absolute heading
     // using squirrely wheels, for a given time.
     // uses a SquirrelyGyroGuideStep to adjust power to 4 motors in assumed order fr, br, fl, bl
-    static public class SquirrelyGyroTimedDriveStep extends AutoLib.ConcurrentSequence {
+    static public class SquirrelyGyroTimedDriveStep extends AutoLib.ConcurrentSequence implements SetDirectionHeadingPower {
 
         public SquirrelyGyroTimedDriveStep(OpMode mode, float direction, float heading, HeadingSensor gyro, SensorLib.PID pid,
                                               DcMotor motors[], float power, float time, boolean stop)
@@ -978,16 +997,17 @@ public class AutoLib {
         // all the motors are done.
 
         // update target direction, heading, and power --
-        // used by interactive teleop modes to redirect the step from controller input
-        public void set(float direction, float heading,float power) {
-            ((SquirrelyGyroGuideStep)mSteps.get(0)).set(direction, heading, power);
-        }
+        // used e.g. by interactive teleop modes to redirect the step from controller input
+        public void setDirection(float direction) { ((SquirrelyGyroGuideStep)mSteps.get(0)).setDirection(direction); }
+        public void setRelativeDirection(float direction) { ((GyroGuideStep)mSteps.get(0)).setRelativeDirection(direction); }
+        public void setHeading(float heading) { ((SquirrelyGyroGuideStep)mSteps.get(0)).setHeading(heading); }
+        public void setPower(float power) { ((SquirrelyGyroGuideStep)mSteps.get(0)).setPower(power); }
     }
 
     // a Step that uses gyro input to stabilize the robot orientation while driving along a given absolute heading
     // using squirrely wheels, for a given number of motor counts.
     // uses a SquirrelyGyroGuideStep to adjust power to 4 motors in assumed order fr, br, fl, bl
-    static public class SquirrelyGyroCountedDriveStep extends ConcurrentSequence {
+    static public class SquirrelyGyroCountedDriveStep extends ConcurrentSequence implements SetDirectionHeadingPower{
 
         public SquirrelyGyroCountedDriveStep(OpMode mode, float direction, float heading, HeadingSensor gyro, SensorLib.PID pid,
                                        DcMotor motors[], float power, int count, boolean stop)
@@ -1011,17 +1031,18 @@ public class AutoLib {
         // all the motors are done.
 
         // update target direction, heading, and power --
-        // used by interactive teleop modes to redirect the step from controller input
-        public void set(float direction, float heading,float power) {
-            ((SquirrelyGyroGuideStep)mSteps.get(0)).set(direction, heading, power);
-        }
+        // used e.g. by interactive teleop modes to redirect the step from controller input
+        public void setDirection(float direction) { ((SquirrelyGyroGuideStep)mSteps.get(0)).setDirection(direction); }
+        public void setRelativeDirection(float direction) { ((GyroGuideStep)mSteps.get(0)).setRelativeDirection(direction); }
+        public void setHeading(float heading) { ((SquirrelyGyroGuideStep)mSteps.get(0)).setHeading(heading); }
+        public void setPower(float power) { ((SquirrelyGyroGuideStep)mSteps.get(0)).setPower(power); }
     }
 
     // a Step that uses gyro input to stabilize the robot orientation while driving along a given relative heading
     // using squirrely wheels, until a DistanceSensor reports we're within a given distance of something.
     // uses a SquirrelyGyroGuideStep to adjust power to 4 motors in assumed order fr, br, fl, bl
     // and a DistanceSensorGuideStep to determine when to stop.
-    static public class SquirrelyGyroDistanceDriveStep extends ConcurrentSequence {
+    static public class SquirrelyGyroDistanceDriveStep extends ConcurrentSequence implements SetDirectionHeadingPower {
 
         public SquirrelyGyroDistanceDriveStep(OpMode mode, float direction, float heading, HeadingSensor gyro, SensorLib.PID pid,
                                               DcMotor motors[], float power, DistanceSensor ds, float distance)
@@ -1050,6 +1071,12 @@ public class AutoLib {
         // the base class loop function does all we need -- it will return "done" when
         // all the motors are done.
 
+        // update target direction, heading, and power --
+        // used e.g. by interactive teleop modes to redirect the step from controller input
+        public void setDirection(float direction) { ((SquirrelyGyroGuideStep)mSteps.get(0)).setDirection(direction); }
+        public void setRelativeDirection(float direction) { ((GyroGuideStep)mSteps.get(0)).setRelativeDirection(direction); }
+        public void setHeading(float heading) { ((SquirrelyGyroGuideStep)mSteps.get(0)).setHeading(heading); }
+        public void setPower(float power) { ((SquirrelyGyroGuideStep)mSteps.get(0)).setPower(power); }
     }
 
 

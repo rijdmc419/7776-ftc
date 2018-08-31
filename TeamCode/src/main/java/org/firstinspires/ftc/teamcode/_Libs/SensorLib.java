@@ -199,7 +199,7 @@ public class SensorLib {
     }
 
     // class that wraps UltrasonicSensor in a DistanceSensor interface
-    static public class UltrasonicDistanceSensor implements DistanceSensor {
+    public static class UltrasonicDistanceSensor implements DistanceSensor {
 
         private UltrasonicSensor mSensor;
 
@@ -217,6 +217,38 @@ public class SensorLib {
         {
             final float UUtoMM = 0.3f*25.4f;    // "Ultrasonic Units" appear to be ~0.3"
             return (float)mSensor.getUltrasonicLevel() * UUtoMM;
+        }
+    }
+
+    // class that integrates movement and direction data to estimate a position on the field
+    public static class PositionIntegrator {
+
+        double mPosX, mPosY;
+
+        public PositionIntegrator() {
+            mPosX = mPosY = 0;
+        }
+
+        public PositionIntegrator(double x, double y) {     // initial position
+            mPosX = x;
+            mPosY = y;
+        }
+
+        // move the position the given distance along the given bearing -
+        // bearing is absolute in degrees with zero being along the X-axis, positive CCW
+        public void move(double distance, double bearing) {
+            double a = Math.toRadians(bearing);
+            mPosX += distance * Math.cos(a);
+            mPosY += distance * Math.sin(a);
+        }
+
+        // get the current position
+        public double getX() { return mPosX; }
+        public double getY() { return mPosY; }
+        public double[] get() {
+            double p[] = new double[2];
+            p[0] = mPosX;  p[1] = mPosY;
+            return p;
         }
     }
 }

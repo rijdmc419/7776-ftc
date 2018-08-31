@@ -32,8 +32,11 @@ THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 package org.firstinspires.ftc.teamcode._Test._Sensors;
 
+import android.app.Activity;
 import android.graphics.Bitmap;
+import android.graphics.Color;
 import android.graphics.RectF;
+import android.widget.ImageView;
 
 import com.qualcomm.robotcore.eventloop.opmode.Autonomous;
 import com.qualcomm.robotcore.eventloop.opmode.OpMode;
@@ -62,12 +65,24 @@ public class VuforiaNavigationTest2 extends OpMode {
     VuforiaLib_FTC2017 mVLib;
     int mLoopCount;
 
+    ImageView mView;
+    protected Bitmap mBitmap; //the bitmap you will display
+    private static final Object bmLock = new Object(); //synchronization lock so we don't display and write
+
     @Override public void init() {
         /**
          * Start up Vuforia using VuforiaLib_FTC2017
          */
         mVLib = new VuforiaLib_FTC2017();
         mVLib.init(this, null);     // pass it this OpMode (so it can do telemetry output) and use its license key for now
+
+        mView = (ImageView)((Activity)hardwareMap.appContext).findViewById(com.qualcomm.ftcrobotcontroller.R.id.OpenCVOverlay);
+        mView.post(new Runnable() {
+            @Override
+            public void run() {
+                mView.setAlpha(1.0f);
+            }
+        });
     }
 
     @Override public void start()
@@ -113,32 +128,63 @@ public class VuforiaNavigationTest2 extends OpMode {
         }
 
         // test image access through Vuforia
-        Bitmap b = mVLib.getBitmap(4);
-        if (b != null) {
-            CameraLib.CameraImage frame = new CameraLib.CameraImage(b);
-            CameraLib.Size camSize = frame.cameraSize();
-            telemetry.addData("Size", String.valueOf(camSize.width) + "x" + String.valueOf(camSize.height));
+        {
 
-            // sample some blocks of pixels in both phone orientations
-            // camera left
-            frame.setCameraRight(false);
-            telemetry.addData("camera left", "upper left %s right %s",
-                    CameraLib.Pixel.colorName(frame.rectHue(new RectF(0.25f, 0.25f, 0.35f, 0.35f))),
-                    CameraLib.Pixel.colorName(frame.rectHue(new RectF(0.75f, 0.25f, 0.85f, 0.35f))));
-            telemetry.addData("camera left", "lower left %s right %s",
-                    CameraLib.Pixel.colorName(frame.rectHue(new RectF(0.25f, 0.75f, 0.35f, 0.85f))),
-                    CameraLib.Pixel.colorName(frame.rectHue(new RectF(0.75f, 0.75f, 0.85f, 0.85f))));
-            // camera right
-            frame.setCameraRight(true);
-            telemetry.addData("camera right", "upper left %s right %s",
-                    CameraLib.Pixel.colorName(frame.rectHue(new RectF(0.25f, 0.25f, 0.35f, 0.35f))),
-                    CameraLib.Pixel.colorName(frame.rectHue(new RectF(0.75f, 0.25f, 0.85f, 0.35f))));
-            telemetry.addData("camera right", "lower left %s right %s",
-                    CameraLib.Pixel.colorName(frame.rectHue(new RectF(0.25f, 0.75f, 0.35f, 0.85f))),
-                    CameraLib.Pixel.colorName(frame.rectHue(new RectF(0.75f, 0.75f, 0.85f, 0.85f))));
+            // Update the bitmap here
+            mBitmap = mVLib.getBitmap(4);
+
+            if (mBitmap != null) {
+                CameraLib.CameraImage frame = new CameraLib.CameraImage(mBitmap);
+                CameraLib.Size camSize = frame.cameraSize();
+                telemetry.addData("Size", String.valueOf(camSize.width) + "x" + String.valueOf(camSize.height));
+
+                // sample some blocks of pixels in both phone orientations
+                // camera left
+                frame.setCameraRight(false);
+                telemetry.addData("camera left", "upper left %s right %s",
+                        CameraLib.Pixel.colorName(frame.rectHue(new RectF(0.2f, 0.2f, 0.3f, 0.3f))),
+                        CameraLib.Pixel.colorName(frame.rectHue(new RectF(0.7f, 0.2f, 0.8f, 0.3f))));
+                telemetry.addData("camera left", "lower left %s right %s",
+                        CameraLib.Pixel.colorName(frame.rectHue(new RectF(0.2f, 0.7f, 0.3f, 0.8f))),
+                        CameraLib.Pixel.colorName(frame.rectHue(new RectF(0.7f, 0.7f, 0.8f, 0.8f))));
+                // camera right
+                frame.setCameraRight(true);
+                telemetry.addData("camera right", "upper left %s right %s",
+                        CameraLib.Pixel.colorName(frame.rectHue(new RectF(0.2f, 0.2f, 0.3f, 0.3f))),
+                        CameraLib.Pixel.colorName(frame.rectHue(new RectF(0.7f, 0.2f, 0.8f, 0.3f))));
+                telemetry.addData("camera right", "lower left %s right %s",
+                        CameraLib.Pixel.colorName(frame.rectHue(new RectF(0.2f, 0.7f, 0.3f, 0.8f))),
+                        CameraLib.Pixel.colorName(frame.rectHue(new RectF(0.7f, 0.7f, 0.8f, 0.8f))));
+
+                // write some pixels into the bitmap we'll display
+                synchronized (bmLock) {
+                    int w = mBitmap.getWidth();
+                    int h = mBitmap.getHeight();
+                    for (int x = -2; x <= 2; x++) {
+                        for (int y = -2; y <= 2; y++) {
+                            mBitmap.setPixel(x + w / 4, y + h / 4, Color.RED);
+                            mBitmap.setPixel(x + 3 * w / 4, y + h / 4, Color.GREEN);
+                            mBitmap.setPixel(x + 3 * w / 4, y + 3 * h / 4, Color.BLUE);
+                            mBitmap.setPixel(x + w / 4, y + 3 * h / 4, Color.WHITE);
+                        }
+                    }
+                }
+
+            }
         }
 
+        //display!
+        mView.getHandler().post(new Runnable() {
+            @Override
+            public void run() {
+                synchronized (bmLock) {
+                    mView.setImageBitmap(mBitmap);
+                    mView.invalidate();
+                }
+            }
+        });
     }
+
 
     @Override public void stop()
     {

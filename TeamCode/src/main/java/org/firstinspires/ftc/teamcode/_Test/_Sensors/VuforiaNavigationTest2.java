@@ -39,6 +39,7 @@ import android.graphics.RectF;
 import android.widget.ImageView;
 
 import com.qualcomm.robotcore.eventloop.opmode.Autonomous;
+import com.qualcomm.robotcore.eventloop.opmode.Disabled;
 import com.qualcomm.robotcore.eventloop.opmode.OpMode;
 import com.vuforia.Image;
 
@@ -59,7 +60,7 @@ import static org.firstinspires.ftc.teamcode._Libs.VuforiaLib_FTC2017.formatPosi
  */
 
 @Autonomous(name="Test: Vuforia Navigation Test 2", group ="Test")
-//@Disabled
+@Disabled
 public class VuforiaNavigationTest2 extends OpMode {
 
     VuforiaLib_FTC2017 mVLib;

@@ -36,6 +36,7 @@ import android.graphics.Bitmap;
 import android.hardware.Camera;
 
 import com.qualcomm.robotcore.eventloop.opmode.Autonomous;
+import com.qualcomm.robotcore.eventloop.opmode.Disabled;
 import com.qualcomm.robotcore.eventloop.opmode.OpMode;
 
 import org.firstinspires.ftc.robotcore.external.matrices.OpenGLMatrix;
@@ -49,7 +50,7 @@ import org.firstinspires.ftc.teamcode._Libs.VuforiaLib_FTC2017;
  */
 
 @Autonomous(name="Test: Vuforia-CameraLib Test 3", group ="Test")
-//@Disabled
+@Disabled
 public class VuforiaNavigationTest3 extends OpMode {
 
     VuforiaLib_FTC2017 mVLib;

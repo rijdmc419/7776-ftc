@@ -8,7 +8,7 @@ import com.qualcomm.robotcore.util.TypeConversion;
 
 // device driver for PixyCam running LEGO I2C protocol
 
-@I2cSensor(name = "PixyCamLego", description = "PixyCamLego", xmlTag = "PixyCamLego")
+//@I2cSensor(name = "PixyCamLego", description = "PixyCamLego", xmlTag = "PixyCamLego")
 public class PixyCamLego extends I2cDeviceSynchDevice<I2cDeviceSynch>
 {
     /**

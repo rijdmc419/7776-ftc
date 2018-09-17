@@ -17,7 +17,7 @@ import static org.firstinspires.ftc.teamcode._Libs.PixyCam.BlockType.NO_START_CO
 // see http://cmucam.org/projects/cmucam5/wiki/Porting_Guide
 // TBD -- rewrite this code to actually do that ...
 
-@I2cSensor(name = "PixyCam", description = "PixyCam", xmlTag = "PixyCam")
+//@I2cSensor(name = "PixyCam", description = "PixyCam", xmlTag = "PixyCam")
 public class PixyCam extends I2cDeviceSynchDevice<I2cDeviceSynch>
 {
     final int PIXY_ARRAYSIZE  =            100;

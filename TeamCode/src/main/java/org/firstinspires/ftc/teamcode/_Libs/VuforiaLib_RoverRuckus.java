@@ -118,7 +118,7 @@ public class VuforiaLib_RoverRuckus implements HeadingSensor, LocationSensor {
          */
 
         // the indices used below are determined by the order of the entries in the RoverRuckus.xml file
-        trackables = this.vuforia.loadTrackablesFromAsset("RoverRuckus");
+        trackables = this.vuforia.loadTrackablesFromAsset("RoverRuckusPRH");
         VuforiaTrackable craterTarget = trackables.get(3);
         craterTarget.setName("Craters");
         VuforiaTrackable footprintTarget = trackables.get(2);

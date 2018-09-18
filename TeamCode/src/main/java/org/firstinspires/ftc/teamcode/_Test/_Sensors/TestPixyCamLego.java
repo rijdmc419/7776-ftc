@@ -22,7 +22,13 @@ public class TestPixyCamLego extends OpMode
     @Override
     public void init()
     {
-        pixyCam = hardwareMap.get(PixyCamLego.class, "pixycamlego");
+
+        try {
+            pixyCam = hardwareMap.get(PixyCamLego.class, "pixycamlego");
+        }
+        catch (Exception e) {
+            pixyCam = null;
+        }
     }
 
     /*
@@ -33,7 +39,10 @@ public class TestPixyCamLego extends OpMode
     public void loop()
     {
         // if (elapsedTime.milliseconds() > 33) // Update every 1/30 of a second.
-        {
+        if (pixyCam == null) {
+            telemetry.addData("no Pixycam available","");
+        }
+        else {
             telemetry.addData("dt(millisec):", elapsedTime.milliseconds());
             elapsedTime.reset();
             PixyCamLego.Block block1 = pixyCam.GetBiggestBlock(1);

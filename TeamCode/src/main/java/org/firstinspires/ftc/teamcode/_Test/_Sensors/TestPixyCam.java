@@ -28,7 +28,13 @@ public class TestPixyCam extends OpMode
     @Override
     public void init()
     {
-        pixyCam = hardwareMap.get(PixyCam.class, "pixycam");
+
+        try {
+            pixyCam = hardwareMap.get(PixyCam.class, "pixycam");
+        }
+        catch (Exception e) {
+            pixyCam = null;
+        }
     }
 
     /*
@@ -39,7 +45,10 @@ public class TestPixyCam extends OpMode
     public void loop()
     {
         // if (elapsedTime.milliseconds() > 33) // Update every 1/30 of a second.
-        {
+        if (pixyCam == null) {
+            telemetry.addData("no Pixycam available","");
+        }
+        else {
             telemetry.addData("dt(millisec):", elapsedTime.milliseconds());
             elapsedTime.reset();
             int count = pixyCam.getBlocks(100);

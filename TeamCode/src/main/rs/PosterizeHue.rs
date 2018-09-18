@@ -81,12 +81,12 @@ uchar3 RS_KERNEL domColor(uchar3 pix) {
             float n = 1.5F;    // dominance factor threshold
             uchar3 white = toU3(0xFFFFFF);
             uchar3 domClr = white;    // default is white (i.e. shades of gray)
-            if (red(pix)>n*green(pix) && red(pix)>n*blue(pix))
+/*          if (red(pix)>n*green(pix) && red(pix)>n*blue(pix))
                 domClr = toU3(0xFF0000);     // red
             else
              if (blue(pix)>n*red(pix) && blue(pix)>n*green(pix))
                  domClr = toU3(0x0000FF);     // blue
-/*          else
+            else
             if (green(pix)>n*red(pix) && green(pix)>n*blue(pix))
                 domClr = toU3(0x00FF00);     // green
             else
@@ -96,9 +96,10 @@ uchar3 RS_KERNEL domColor(uchar3 pix) {
             if (blue(pix)>n*green(pix) && red(pix)>n*green(pix))
                 domClr = toU3(0xFF00FF);     // magenta
             else
-            if (red(pix)>n*blue(pix) && green(pix)>n*blue(pix))
-                domClr = toU3(0xFFFF00);     // yellow
 */
+            if (red(pix)>n*blue(pix) && green(pix)>n*blue(pix) && red(pix)<n*green(pix) && green(pix)<n*red(pix))
+                domClr = toU3(0xFFFF00);     // yellow
+
             // if it has no discernible hue, encode its gray level 0-7
             if (domClr.r == white.r && domClr.g == white.g && domClr.b == white.b) {
                 float value = red(pix)*0.2f + green(pix)*0.7f + blue(pix)*0.1f; // 0..255

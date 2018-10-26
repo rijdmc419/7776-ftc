@@ -1,6 +1,11 @@
 package org.firstinspires.ftc.teamcode._Libs;
 
+import android.graphics.Bitmap;
+import android.graphics.RectF;
+
 import com.qualcomm.robotcore.eventloop.opmode.OpMode;
+import com.vuforia.Frame;
+import com.vuforia.Image;
 import com.vuforia.PIXEL_FORMAT;
 import com.vuforia.Vuforia;
 
@@ -18,6 +23,7 @@ import org.firstinspires.ftc.robotcore.external.navigation.VuforiaTrackableDefau
 import org.firstinspires.ftc.robotcore.external.navigation.VuforiaTrackables;
 import org.firstinspires.ftc.robotcore.internal.vuforia.VuforiaLocalizerImpl;
 
+import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.BlockingQueue;
@@ -118,12 +124,12 @@ public class VuforiaLib_RoverRuckus implements HeadingSensor, LocationSensor {
          */
 
         // the indices used below are determined by the order of the entries in the RoverRuckus.xml file
-        trackables = this.vuforia.loadTrackablesFromAsset("RoverRuckusPRH");
-        VuforiaTrackable craterTarget = trackables.get(3);
+        trackables = this.vuforia.loadTrackablesFromAsset("RoverRuckus");
+        VuforiaTrackable craterTarget = trackables.get(2);
         craterTarget.setName("Craters");
-        VuforiaTrackable footprintTarget = trackables.get(2);
+        VuforiaTrackable footprintTarget = trackables.get(1);
         footprintTarget.setName("Footprint");
-        VuforiaTrackable nebulaTarget = trackables.get(1);
+        VuforiaTrackable nebulaTarget = trackables.get(3);
         nebulaTarget.setName("Nebula");
         VuforiaTrackable roverTarget = trackables.get(0);
         roverTarget.setName("Rover");
@@ -285,7 +291,7 @@ public class VuforiaLib_RoverRuckus implements HeadingSensor, LocationSensor {
          * @see VuforiaTrackableDefaultListener#getRobotLocation()
          */
 
-        // get access to video frames so we can do other processing like looking for red/blue beacons
+        // get access to video frames so we can do other processing like looking for scene objects
         Vuforia.setFrameFormat(PIXEL_FORMAT.RGB565, true); //enables RGB format for the image
         vuforia.setFrameQueueCapacity(1);
         mFrameQueue = vuforia.getFrameQueue();
@@ -415,18 +421,56 @@ public class VuforiaLib_RoverRuckus implements HeadingSensor, LocationSensor {
         return String.format("%s", orientation.toString());
     }
 
-    // get access to video frames for other uses
-    public VuforiaLocalizer.CloseableFrame getFrame()
-    {
-        if (mFrameQueue != null)
-            mCF = mFrameQueue.poll();
-        return mCF;
+
+    // get a bitmap from Vuforia - these are our own versions from 2017 code --
+    // they don't use Vuforia convertFrameToBitmap function, which are essentially the same as these but don't do scaling or cropping as we do.
+
+    public Bitmap getBitmap(int sample) {
+        return getBitmap(new RectF(0,0,1,1), sample);
     }
 
-    public void releaseFrame()
-    {
-        if (mCF != null)
-            mCF.close();
-        mCF = null;         // forget the frame
+    public Bitmap getBitmap(RectF rect, int sample) {
+        try {
+            VuforiaLocalizer.CloseableFrame frame = mFrameQueue.take();
+            int img = 0;
+            for (; img < frame.getNumImages(); img++) {
+                //telemetry.addData("Image format " + img, frame.getImage(img).getFormat());
+                if (frame.getImage(img).getFormat() == PIXEL_FORMAT.RGB565) break;
+            }
+
+            if (img == frame.getNumImages()) throw new IllegalArgumentException("Incorrect format");
+
+            // get the Image with the correct format and extract its data
+            Image image = frame.getImage(img);
+            ByteBuffer byteBuffer = image.getPixels();
+
+            int h = image.getHeight();    // height of src data
+            int w = image.getWidth();     // width of src data
+
+            // convert the data to a Bitmap
+            byteBuffer.rewind();
+            Bitmap bitmap = Bitmap.createBitmap(w, h, Bitmap.Config.RGB_565);
+            bitmap.copyPixelsFromBuffer(byteBuffer);
+
+            // crop the Bitmap if requested
+            Bitmap bitmapCropped = bitmap;
+            int ch = Math.round(h*rect.height());    // height of cropped src data
+            int cw = Math.round(w*rect.width());     // width of cropped src data
+            if (ch < h || cw < w) {
+                bitmapCropped = Bitmap.createBitmap(bitmap,
+                        Math.max(0, Math.round(w*rect.left)), Math.max(0, Math.round(h*rect.top)), cw, ch);
+                h = ch; w = cw;
+            }
+
+            // scale the (possibly cropped) result bitmap by the "sample" factor
+            Bitmap bitmapScaled = Bitmap.createScaledBitmap(bitmapCropped, w/sample, h/sample, true);
+
+            frame.close();
+
+            return bitmapScaled;
+        }
+        catch (Exception e) {}
+
+        return null;
     }
 }

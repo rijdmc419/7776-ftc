@@ -94,7 +94,13 @@ public class CameraTestOpVfRS extends OpMode {
 
     public void stop() {
         mRsPosterize.destroyScript();
-        mVLib.stop();
+        mVLib.stop();       // Vuforia claims to do this automatically on OpMode stop but ...
+        mView.post(new Runnable() {
+            @Override
+            public void run() {
+                mView.setAlpha(0.0f);
+            }
+        });     // hide the overlay window
     }
 
 }

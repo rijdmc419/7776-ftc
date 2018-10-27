@@ -228,7 +228,7 @@ public class VuforiaLib_RoverRuckus implements HeadingSensor, LocationSensor {
         * - Finally, we translate it in X and Y to its position on the Back wall.
         */
         nebulaTarget.setLocation(OpenGLMatrix
-                .translation(0, -mmFTCFieldWidth/2, mmFTCTargetCenterZ)
+                .translation(0, mmFTCFieldWidth/2, mmFTCTargetCenterZ)
                 .multiplied(Orientation.getRotationMatrix(
                         AxesReference.EXTRINSIC, AxesOrder.XZX,
                         AngleUnit.DEGREES, 90, 0, 0)));
@@ -425,11 +425,42 @@ public class VuforiaLib_RoverRuckus implements HeadingSensor, LocationSensor {
     // get a bitmap from Vuforia - these are our own versions from 2017 code --
     // they don't use Vuforia convertFrameToBitmap function, which are essentially the same as these but don't do scaling or cropping as we do.
 
+    // get entire image downsampled by an integer factor (e.g. 4 gives an image 1/4 the height and width of what the camera delivered)
     public Bitmap getBitmap(int sample) {
         return getBitmap(new RectF(0,0,1,1), sample);
     }
 
+    // get entire image scaled by the given scale factor
+    // (e.g. 4 gives an image 1/4 the height and width of what the camera delivered)
+    public Bitmap getBitmap(float scale) {
+        return getBitmap(new RectF(0,0,1,1), scale);
+    }
+
+    // get entire image scaled to the given width and height (result will be distorted if you don't get this right)
+    public Bitmap getBitmap(int width, int height) {
+        return getBitmap(new RectF(0,0,1,1), 0, width, height);
+    }
+
+    // get a cropped portion of the camera image downsampled by an integer factor
+    // (e.g. sample=4 gives an image 1/4 the height and width of the cropped portion)
     public Bitmap getBitmap(RectF rect, int sample) {
+        return getBitmap(rect, 1.0f/sample, 0, 0);
+    }
+
+    // get a cropped portion of the camera image scaled by a given factor
+    // (e.g. scale=0.25 gives an image 1/4 the height and width of the cropped portion)
+    public Bitmap getBitmap(RectF rect, float scale) {
+        return getBitmap(rect, scale, 0, 0);
+    }
+
+    // get a cropped portion of the camera image scaled to the given width and height (result will be distorted if you don't get this right)
+    public Bitmap getBitmap(RectF rect, int width, int height) {
+        return getBitmap(rect, 0, width, height);
+    }
+
+    // this function handles all the various ways of describing the final output size
+    // rect is the portion of the source image you want, normalized 0..1 in both axes
+    private Bitmap getBitmap(RectF rect, float scale, int height, int width) {
         try {
             VuforiaLocalizer.CloseableFrame frame = mFrameQueue.take();
             int img = 0;
@@ -462,8 +493,20 @@ public class VuforiaLib_RoverRuckus implements HeadingSensor, LocationSensor {
                 h = ch; w = cw;
             }
 
-            // scale the (possibly cropped) result bitmap by the "sample" factor
-            Bitmap bitmapScaled = Bitmap.createScaledBitmap(bitmapCropped, w/sample, h/sample, true);
+            // get requested output size in one of several ways
+            int dstW = cw;
+            int dstH = ch;
+            if (width>0 && height>0) {
+                dstW = width;
+                dstH = height;
+            }
+            else if (scale > 0) {
+                dstW = (int)(cw*scale);
+                dstH = (int)(ch*scale);
+            }
+
+            // scale the (possibly cropped) result bitmap to the requested size
+            Bitmap bitmapScaled = Bitmap.createScaledBitmap(bitmapCropped, dstW, dstH, true);
 
             frame.close();
 

@@ -15,7 +15,7 @@ import com.qualcomm.robotcore.eventloop.opmode.OpMode;
 
 import org.firstinspires.ftc.teamcode._Libs.CameraLib;
 import org.firstinspires.ftc.teamcode._Libs.RS_Posterize;
-import org.firstinspires.ftc.teamcode._Libs.VuforiaLib_FTC2017;
+import org.firstinspires.ftc.teamcode._Libs.VuforiaLib_RoverRuckus;
 
 
 @Autonomous(name="Test: Camera Test Vf RS", group ="Test")
@@ -23,7 +23,7 @@ import org.firstinspires.ftc.teamcode._Libs.VuforiaLib_FTC2017;
 public class CameraTestOpVfRS extends OpMode {
 
     int mLoopCount;
-    VuforiaLib_FTC2017 mVLib;
+    VuforiaLib_RoverRuckus mVLib;
     ImageView mView;
     RS_Posterize mRsPosterize;
     Bitmap mBmOut;
@@ -34,7 +34,7 @@ public class CameraTestOpVfRS extends OpMode {
 
     @Override
     public void init() {
-        mVLib = new VuforiaLib_FTC2017();
+        mVLib = new VuforiaLib_RoverRuckus();
         mVLib.init(this, null);     // pass it this OpMode (so it can do telemetry output) and use its license key for now
 
         mView = (ImageView)((Activity)hardwareMap.appContext).findViewById(com.qualcomm.ftcrobotcontroller.R.id.OpenCVOverlay);
@@ -60,7 +60,7 @@ public class CameraTestOpVfRS extends OpMode {
     public void loop() {
 
         // test image access through Vuforia
-        Bitmap bmIn = mVLib.getBitmap(8);
+        Bitmap bmIn = mVLib.getBitmap(4);
         if (bmIn != null) {
             // create the output bitmap we'll display on the RC phone screen
             mBmOut = Bitmap.createBitmap(bmIn.getWidth(), bmIn.getHeight(), Bitmap.Config.RGB_565);
@@ -93,7 +93,8 @@ public class CameraTestOpVfRS extends OpMode {
     }
 
     public void stop() {
-        mRsPosterize.destroyScript();
+        if (mRsPosterize != null)
+            mRsPosterize.destroyScript();
         mVLib.stop();       // Vuforia claims to do this automatically on OpMode stop but ...
         mView.post(new Runnable() {
             @Override

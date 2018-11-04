@@ -17,11 +17,21 @@ android {
         targetCompatibility JavaVersion.VERSION_1_7
     }
 }
-
+buildscript {
+    repositories {
+        google() // <----
+        jcenter()
+    }
+    // dependencies {
+    //   classpath 'com.android.tools.build:gradle:3.2.1'
+    //}
+}
 repositories {
     flatDir {
         dirs '../libs'
     }
+    google()
+    jcenter()
 }
 
 apply from: 'build.release.gradle'

@@ -97,7 +97,8 @@ uchar3 RS_KERNEL domColor(uchar3 pix) {
                 domClr = toU3(0xFF00FF);     // magenta
             else
 */
-            if (red(pix)>n*blue(pix) && green(pix)>n*blue(pix) && red(pix)<n*green(pix) && green(pix)<n*red(pix))
+            // RoverRuckus block color (orange-yellow)
+            if (red(pix)>6*blue(pix) && green(pix)>3*blue(pix) && red(pix)<4*green(pix) && green(pix)<red(pix))
                 domClr = toU3(0xFFFF00);     // yellow
 
             // if it has no discernible hue, encode its gray level 0-7

@@ -8,11 +8,13 @@ package org.firstinspires.ftc.teamcode._Test._Sensors;
 
 import android.app.Activity;
 import android.graphics.Bitmap;
+import android.graphics.Point;
 import android.widget.ImageView;
 
 import com.qualcomm.robotcore.eventloop.opmode.Autonomous;
 import com.qualcomm.robotcore.eventloop.opmode.OpMode;
 
+import org.firstinspires.ftc.teamcode._Libs.BlobFinder;
 import org.firstinspires.ftc.teamcode._Libs.CameraLib;
 import org.firstinspires.ftc.teamcode._Libs.RS_Posterize;
 import org.firstinspires.ftc.teamcode._Libs.VuforiaLib_RoverRuckus;
@@ -60,7 +62,7 @@ public class CameraTestOpVfRS extends OpMode {
     public void loop() {
 
         // test image access through Vuforia
-        Bitmap bmIn = mVLib.getBitmap(4);
+        Bitmap bmIn = mVLib.getBitmap(32);
         if (bmIn != null) {
             // create the output bitmap we'll display on the RC phone screen
             mBmOut = Bitmap.createBitmap(bmIn.getWidth(), bmIn.getHeight(), Bitmap.Config.RGB_565);
@@ -69,15 +71,17 @@ public class CameraTestOpVfRS extends OpMode {
             mRsPosterize.runScript(bmIn, mBmOut);
 
             // do some data extraction on the processed bitmap
-            /*
             CameraLib.CameraImage frame = new CameraLib.CameraImage(bmIn);
             CameraLib.Size camSize = frame.cameraSize();
             telemetry.addData("Size", String.valueOf(camSize.width) + "x" + String.valueOf(camSize.height));
-            final int bandSize = 2;         // width of each band of pixel columns below
-            final float minFrac = 0.4f;     // minimum fraction of pixels in band that needs to be of same color to mark it as "dominant"
-            telemetry.addData("hue columns", frame.columnHue(bandSize, null, minFrac));
-            telemetry.addData("dom columns", frame.columnDomColor(bandSize, null, minFrac));
-            */
+            telemetry.addData("Center In", String.format("0x%08x", bmIn.getPixel(bmIn.getWidth()/2, bmIn.getHeight()/2)));
+            telemetry.addData("Center Out", String.format("0x%08x", mBmOut.getPixel(mBmOut.getWidth()/2, mBmOut.getHeight()/2)));
+
+            BlobFinder bf = new BlobFinder(mBmOut);
+            int count = bf.find(0xFFFFFF00);    // posterized yellow value
+            Point centroid = bf.getCentroid();
+            telemetry.addData("blob count", count);
+            telemetry.addData("centroid", centroid.x + "," + centroid.y);
 
             //display the processed bitmap
             mView.post(new Runnable() {

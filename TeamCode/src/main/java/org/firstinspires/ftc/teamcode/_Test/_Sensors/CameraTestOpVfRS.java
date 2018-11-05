@@ -8,6 +8,9 @@ package org.firstinspires.ftc.teamcode._Test._Sensors;
 
 import android.app.Activity;
 import android.graphics.Bitmap;
+import android.graphics.Canvas;
+import android.graphics.Color;
+import android.graphics.Paint;
 import android.graphics.Point;
 import android.widget.ImageView;
 
@@ -29,6 +32,7 @@ public class CameraTestOpVfRS extends OpMode {
     ImageView mView;
     RS_Posterize mRsPosterize;
     Bitmap mBmOut;
+    Paint mPaintGreen;
 
     // Constructor
     public CameraTestOpVfRS() {
@@ -47,6 +51,8 @@ public class CameraTestOpVfRS extends OpMode {
             }
         });
 
+        mPaintGreen = new Paint();
+        mPaintGreen.setColor(Color.GREEN);
     }
 
     @Override public void start()
@@ -82,6 +88,12 @@ public class CameraTestOpVfRS extends OpMode {
             Point centroid = bf.getCentroid();
             telemetry.addData("blob count", count);
             telemetry.addData("centroid", centroid.x + "," + centroid.y);
+
+            // add annotations to the bitmap showing detected column centers
+            final int XS=5;     // cross size
+            Canvas canvas = new Canvas(mBmOut);
+            canvas.drawLine(centroid.x-XS, centroid.y, centroid.x+XS, centroid.y, mPaintGreen);
+            canvas.drawLine(centroid.x, centroid.y-XS, centroid.x, centroid.y+XS, mPaintGreen);
 
             //display the processed bitmap
             mView.post(new Runnable() {

@@ -10,6 +10,7 @@ import android.app.Activity;
 import android.graphics.Bitmap;
 import android.graphics.Canvas;
 import android.graphics.Color;
+import android.graphics.Matrix;
 import android.graphics.Paint;
 import android.graphics.Point;
 import android.widget.ImageView;
@@ -70,16 +71,21 @@ public class CameraTestOpVfRS extends OpMode {
         // test image access through Vuforia
         Bitmap bmIn = mVLib.getBitmap(16);
         if (bmIn != null) {
-            // create the output bitmap we'll display on the RC phone screen
-            mBmOut = Bitmap.createBitmap(bmIn.getWidth(), bmIn.getHeight(), Bitmap.Config.RGB_565);
+            // create the output bitmap for the posterization RenderScript
+            Bitmap bmOut = Bitmap.createBitmap(bmIn.getWidth(), bmIn.getHeight(), Bitmap.Config.RGB_565);
 
             // do some processing on the input bitmap in RenderScript to generate the output image
-            mRsPosterize.runScript(bmIn, mBmOut);
+            mRsPosterize.runScript(bmIn, bmOut);
 
-            // do some data extraction on the processed bitmap
-            CameraLib.CameraImage frame = new CameraLib.CameraImage(bmIn);
-            CameraLib.Size camSize = frame.cameraSize();
-            telemetry.addData("Size", String.valueOf(camSize.width) + "x" + String.valueOf(camSize.height));
+            // optionally rotate image 180 degrees if phone orientation makes it upside down
+            final boolean bUpsideDown = true;
+            if (bUpsideDown)
+                mBmOut = RotateBitmap(bmOut, 180);
+            else
+                mBmOut = bmOut;
+
+            // do some data extraction on the raw and processed bitmaps
+            telemetry.addData("Size", String.valueOf(bmIn.getWidth()) + "x" + String.valueOf(bmIn.getHeight()));
             telemetry.addData("Center In", String.format("0x%08x", bmIn.getPixel(bmIn.getWidth()/2, bmIn.getHeight()/2)));
             telemetry.addData("Center Out", String.format("0x%08x", mBmOut.getPixel(mBmOut.getWidth()/2, mBmOut.getHeight()/2)));
 
@@ -120,5 +126,11 @@ public class CameraTestOpVfRS extends OpMode {
         });     // hide the overlay window
     }
 
+    public static Bitmap RotateBitmap(Bitmap source, float angle)
+    {
+        Matrix matrix = new Matrix();
+        matrix.postRotate(angle);
+        return Bitmap.createBitmap(source, 0, 0, source.getWidth(), source.getHeight(), matrix, true);
+    }
 }
 

@@ -3,8 +3,10 @@ package org.firstinspires.ftc.teamcode._Libs;
 // image processing utility class that finds the biggest contiguous blob of pixels of a given color in an image
 
 import android.graphics.Bitmap;
-import android.graphics.Color;
 import android.graphics.Point;
+
+import java.util.Queue;
+import java.util.concurrent.ArrayBlockingQueue;
 
 public class BlobFinder {
 
@@ -15,6 +17,7 @@ public class BlobFinder {
     Point bMin, bMax;       // limits of connected blob at "current" pixel
     Point bbMin, bbMax;     // limits of biggest connected blob found so far
     int color;              // color we're looking for
+    Queue<Point> pending;   // queue of pending pixel locations to check
 
     public BlobFinder(Bitmap bitmap) {
             image = bitmap;
@@ -24,6 +27,7 @@ public class BlobFinder {
             bbMax = new Point();
             bMin = new Point();
             bMax = new Point();
+            pending = new ArrayBlockingQueue<Point>(image.getHeight()*image.getWidth());    // worst case ...
     }
 
     // return number of pixels in biggest blob of given color
@@ -73,40 +77,54 @@ public class BlobFinder {
         return new Point((bbMin.x+bbMax.x)/2, (bbMin.y+bbMax.y)/2);
     }
 
-    // This is the deep search function
-    private int deepCount(int x, int y) {
+    // This is the deep search function - compute the number of connected pixels of
+    // the search color starting at location x,y.
+    // The natural way to do this would be recursive but we run out of stack space at about 300 pixels so
+    // we'll do it the hard way using an array of Points to keep track of pixels to be searched.
+    private int deepCount(int ox, int oy) {
         int count = 0;
 
-        // Ignore the pixel if it's out of bounds
-        if (x < 0 || x >= image.getWidth() || y < 0 || y >= image.getHeight())
-            return count;
+        pending.add(new Point(ox,oy));
 
-        // Ignore the pixel if it's already visited
-        if (visited[y][x] == true)
-            return count;
+        while(!pending.isEmpty()) {
 
-        // Mark the pixel as visited
-        visited[y][x] = true;
+            // get the next element from the queue
+            Point p = pending.remove();
+            int x = p.x;
+            int y = p.y;
 
-        // Skip if the pixel is not the requested color
-        if (image.getPixel(x,y) != color)
-            return count;
+            // Ignore the pixel if it's out of bounds
+            if (p.x < 0 || p.x >= image.getWidth() || p.y < 0 || p.y >= image.getHeight())
+                continue;
 
-        // Expand min/max to include this pixel
-        if (x < bMin.x) bMin.x = x;
-        if (x > bMax.x) bMax.x = x;
-        if (y < bMin.y) bMin.y = y;
-        if (y > bMax.y) bMax.y = y;
+            // Ignore the pixel if it's already visited
+            if (visited[y][x] == true)
+                continue;
 
-        // Increment count by 1
-        count++;
+            // Mark the pixel as visited
+            visited[y][x] = true;
 
-        // Search for adjacent pixels (up, left, right, down)
-        // recursively
-        count += deepCount(x, y-1);
-        count += deepCount(x-1, y);
-        count += deepCount(x+1, y);
-        count += deepCount(x, y+1);
+            // Skip if the pixel is not the requested color
+            if (image.getPixel(x,y) != color)
+                continue;
+
+            // Expand min/max to include this pixel
+            if (x < bMin.x) bMin.x = x;
+            if (x > bMax.x) bMax.x = x;
+            if (y < bMin.y) bMin.y = y;
+            if (y > bMax.y) bMax.y = y;
+
+            // Increment count by 1
+            count++;
+
+            // Search for adjacent pixels (up, left, right, down)
+            // recursively
+            pending.add(new Point(x, y-1));
+            pending.add(new Point(x-1, y));
+            pending.add(new Point(x+1, y));
+            pending.add(new Point(x, y+1));
+
+        }
 
         // return the total count
         return count;

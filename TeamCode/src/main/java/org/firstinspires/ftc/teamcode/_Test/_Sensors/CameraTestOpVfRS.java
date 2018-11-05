@@ -62,7 +62,7 @@ public class CameraTestOpVfRS extends OpMode {
     public void loop() {
 
         // test image access through Vuforia
-        Bitmap bmIn = mVLib.getBitmap(32);
+        Bitmap bmIn = mVLib.getBitmap(16);
         if (bmIn != null) {
             // create the output bitmap we'll display on the RC phone screen
             mBmOut = Bitmap.createBitmap(bmIn.getWidth(), bmIn.getHeight(), Bitmap.Config.RGB_565);

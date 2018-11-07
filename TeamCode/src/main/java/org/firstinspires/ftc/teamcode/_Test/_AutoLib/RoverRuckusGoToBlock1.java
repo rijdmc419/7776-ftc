@@ -273,15 +273,6 @@ public class RoverRuckusGoToBlock1 extends OpMode implements SetBitmap {
         (mMotors[2] = mf.getDcMotor("fl")).setDirection(DcMotor.Direction.REVERSE);
         (mMotors[3] = mf.getDcMotor("bl")).setDirection(DcMotor.Direction.REVERSE);
 
-        /*
-        // get hardware gyro
-        mGyro = mf.getGyro("gyro");
-
-        // wrap gyro in an object that calibrates it and corrects its output
-        mCorrGyro = new SensorLib.CorrectedGyro(mGyro);
-        mCorrGyro.calibrate();
-        */
-
         // best to do this now, which is called from opmode's init() function
         mVLib = new VuforiaLib_RoverRuckus();
         mVLib.init(this, null);
@@ -289,16 +280,11 @@ public class RoverRuckusGoToBlock1 extends OpMode implements SetBitmap {
         // create the root Sequence for this autonomous OpMode
         mSequence = new AutoLib.LinearSequence();
         // make a step that will steer the robot given guidance from the GoToBlockGuideStep
-        // this can be a normal wheel steering step or just a debug logging step
-        AutoLib.MotorGuideStep motorGuideStep = false ?
-                    new AutoLib.MotorLogStep(this) :
-                    new AutoLib.ErrorGuideStep(this, null, null, 0.6f);
-        // make a step that guides the motion step by looking for a particular (red or blue) Cryptobox
-        // it also implements the SetMark interface so VuforiaGetMarkStep can call it to tell which box to go for
-        // and in this case, is given a SquirrelyGyroGuide step to give steering commands to.
-        mGuideStep  = new GoToBlockGuideStep(
-                this, this, mVLib, motorGuideStep);
-        // make and add the Step that goes to the orange block
+        AutoLib.MotorGuideStep motorGuideStep = new AutoLib.ErrorGuideStep(this, null, null, 0.6f);
+        // make a step that analyzes a camera image from Vuforia and steers toward the biggest orange blob, presumably the block.
+        // it uses a ErrorGuideStep to process the heading error it computes into motor steering commands.
+        mGuideStep  = new GoToBlockGuideStep(this, this, mVLib, motorGuideStep);
+        // make and add the Step that combines all of the above to go to the orange block
         mSequence.add(new AutoLib.GuidedTerminatedDriveStep(this, mGuideStep, motorGuideStep, mMotors));
         // make and add a step that tells us we're done
         mSequence.add(new AutoLib.LogTimeStep(this,"Done!", 5));

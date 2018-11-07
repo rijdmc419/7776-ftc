@@ -1,6 +1,7 @@
 package org.firstinspires.ftc.teamcode._Auto;
 
 import com.qualcomm.robotcore.eventloop.opmode.Autonomous;
+import com.qualcomm.robotcore.eventloop.opmode.Disabled;
 import com.qualcomm.robotcore.eventloop.opmode.OpMode;
 import com.qualcomm.robotcore.hardware.DcMotor;
 
@@ -20,7 +21,7 @@ import org.firstinspires.ftc.teamcode._Libs.VuforiaLib_FTC2016;
 // one of the target images is visible.
 
 @Autonomous(name="Vuforia Squirrely Drive Test 1", group ="Test")
-//@Disabled
+@Disabled
 public class VuforiaSquirrelyDriveTestOp extends OpMode {
 
     AutoLib.Sequence mSequence;             // the root of the sequence tree

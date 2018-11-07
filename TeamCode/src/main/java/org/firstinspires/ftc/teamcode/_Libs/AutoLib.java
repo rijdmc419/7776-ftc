@@ -2,6 +2,7 @@ package org.firstinspires.ftc.teamcode._Libs;
 
 import android.support.annotation.ColorInt;
 
+import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
 import com.qualcomm.robotcore.eventloop.opmode.OpMode;
 import com.qualcomm.robotcore.hardware.ColorSensor;
 import com.qualcomm.robotcore.hardware.DcMotor;
@@ -14,9 +15,14 @@ import com.qualcomm.robotcore.hardware.ServoController;
 import com.qualcomm.robotcore.hardware.configuration.typecontainers.MotorConfigurationType;
 import com.qualcomm.robotcore.util.Range;
 
+import org.firstinspires.ftc.robotcore.external.ClassFactory;
 import org.firstinspires.ftc.robotcore.external.matrices.VectorF;
+import org.firstinspires.ftc.robotcore.external.navigation.VuforiaLocalizer;
+import org.firstinspires.ftc.robotcore.external.tfod.Recognition;
+import org.firstinspires.ftc.robotcore.external.tfod.TFObjectDetector;
 
 import java.util.ArrayList;
+import java.util.List;
 import java.util.concurrent.TimeUnit;
 
 /**
@@ -1934,12 +1940,11 @@ public class AutoLib {
             mOpMode = opMode;
         }
 
-        public DcMotor getDcMotor(String name){
+        public DcMotor getDcMotor(String name) {
             DcMotor motor = null;
             try {
                 motor = mOpMode.hardwareMap.dcMotor.get(name);
-            }
-            catch (Exception e) {
+            } catch (Exception e) {
                 // okay -- just return null (absent) for this motor
             }
 
@@ -1950,12 +1955,11 @@ public class AutoLib {
             return motor;
         }
 
-        public Servo getServo(String name){
+        public Servo getServo(String name) {
             Servo servo = null;
             try {
                 servo = mOpMode.hardwareMap.servo.get(name);
-            }
-            catch (Exception e) {
+            } catch (Exception e) {
                 // okay - just return null (absent) for this servo
             }
 
@@ -1966,30 +1970,27 @@ public class AutoLib {
             return servo;
         }
 
-        public GyroSensor getGyro(String name){
+        public GyroSensor getGyro(String name) {
             GyroSensor gyro = null;
             try {
                 gyro = mOpMode.hardwareMap.gyroSensor.get(name);
-            }
-            catch (Exception e) {
+            } catch (Exception e) {
                 // okay - just return null (absent) for this servo
             }
             return gyro;
         }
 
-        public ColorSensor getColorSensor(String name){
+        public ColorSensor getColorSensor(String name) {
             ColorSensor cs = null;
             try {
                 cs = mOpMode.hardwareMap.colorSensor.get(name);
-            }
-            catch (Exception e) {
+            } catch (Exception e) {
                 // okay - just return null (absent) for this servo
             }
             return cs;
         }
 
     }
-
 }
 
 

@@ -28,19 +28,22 @@ public class RoverRuckusTeleOp extends OpMode{
 
     @Override
     public void loop() {
-        if(gamepad1.left_bumper && !gamepad1.right_bumper){
+        if(gamepad1.left_bumper && !gamepad1.right_bumper){ //Drivetrain Speed Controls
             speedFactor = 1; }
         else if(gamepad1.right_bumper && !gamepad1.left_bumper){
             speedFactor = 0.25; }
         else if(!gamepad1.right_bumper && !gamepad1.left_bumper){
             speedFactor = 0.5; }
 
-        /*if(gamepad2.left_bumper && !gamepad2.right_bumper){
-            robot.lift.setPower(liftSpeed); }
+        if(gamepad2.left_bumper && !gamepad2.right_bumper){ //Lift Controls
+            robot.lift.setPower(liftSpeed);
+            robot.lift2.setPower(liftSpeed); }
         else if(gamepad2.right_bumper && !gamepad2.left_bumper){
-            robot.lift.setPower(-1 * liftSpeed); }
+            robot.lift.setPower(-1 * liftSpeed);
+            robot.lift2.setPower(-1 * liftSpeed); }
         else if(!gamepad2.right_bumper && !gamepad2.left_bumper){
-            robot.lift.setPower(0); }*/
+            robot.lift.setPower(0);
+            robot.lift2.setPower(0); }
 
 
         left = (-1)* Math.pow(gamepad1.left_stick_y, 3) * speedFactor;
@@ -52,10 +55,12 @@ public class RoverRuckusTeleOp extends OpMode{
         robot.br.setPower(right);
 
         //telemetry.addData("Gamepad 1: ", gamepad1);
+        //telemetry.addData("Gamepad 2:", gamepad2);
         telemetry.addData("Speed Factor: ", printFormat.format(speedFactor));
         telemetry.addData("Left: ", printFormat.format(left));
         telemetry.addData("Right: ", printFormat.format(right));
-        //telemetry.addData("Lift Motor: ", printFormat.format(robot.lift.getPower()));
+        telemetry.addData("Lift Motor 1: ", printFormat.format(robot.lift.getPower()));
+        telemetry.addData("Lift Motor 2: ", printFormat.format(robot.lift2.getPower()));
 
     }
 }

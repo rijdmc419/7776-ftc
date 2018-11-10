@@ -19,7 +19,7 @@ public class RoverRuckusTeleOp extends OpMode{
     RoverRuckusHardware robot =  new RoverRuckusHardware();
     double left, right;
     double speedFactor = 0.5;
-    double liftSpeed = 0.5;
+    double liftSpeed = 1;
     DecimalFormat printFormat = new DecimalFormat ("#.###");
     @Override
     public void init() {

@@ -106,6 +106,7 @@ class GoToBlockGuideStep extends AutoLib.MotorGuideStep implements SetPosterizer
         mPaintRed.setColor(Color.RED);
         mPaintGreen = new Paint();
         mPaintGreen.setColor(Color.GREEN);
+        mPaintGreen.setStyle(Paint.Style.STROKE);
         mPaintBlue = new Paint();
         mPaintBlue.setColor(Color.BLUE);
     }
@@ -122,8 +123,8 @@ class GoToBlockGuideStep extends AutoLib.MotorGuideStep implements SetPosterizer
         super.loop();
 
         // get most recent frame from camera (through Vuforia)
-        RectF rect = new RectF(0,0,1.0f,1.0f);        // use whole frame for now
-        Bitmap bmIn = mVLib.getBitmap(rect, 8);                      // get cropped, downsampled image from Vuforia (use 8 for ZTE, 16 for S5)
+        RectF rect = new RectF(0,0.5f,1.0f,1.0f);        // use bottom half of frame
+        Bitmap bmIn = mVLib.getBitmap(rect, 4);                      // get cropped, downsampled image from Vuforia
 
         if (bmIn != null) {
 
@@ -148,18 +149,21 @@ class GoToBlockGuideStep extends AutoLib.MotorGuideStep implements SetPosterizer
             mOpMode.telemetry.addData("Center Out", String.format("0x%08x", mBmOut.getPixel(mBmOut.getWidth()/2, mBmOut.getHeight()/2)));
 
             BlobFinder bf = new BlobFinder(mBmOut);
-            final int sample = 2;       // look for blobs at every Nth pixel
+            final int sample = 4;       // look for blobs at every Nth pixel
             final int blobColor = 0xFFFFFF00;
             int count = bf.find(blobColor, sample);    // posterized yellow value
             Point centroid = bf.getCentroid();
             mOpMode.telemetry.addData("blob count", count);
             mOpMode.telemetry.addData("centroid", centroid.x + "," + centroid.y);
 
-            // add annotations to the bitmap showing detected column centers
+            // add annotations to the bitmap showing detected blob center and limits
             final int XS=5;     // cross size
             Canvas canvas = new Canvas(mBmOut);
             canvas.drawLine(centroid.x-XS, centroid.y, centroid.x+XS, centroid.y, mPaintGreen);
             canvas.drawLine(centroid.x, centroid.y-XS, centroid.x, centroid.y+XS, mPaintGreen);
+            Point blobMin = bf.getBoundsMin();
+            Point blobMax = bf.getBoundsMax();
+            canvas.drawRect(blobMin.x, blobMin.y, blobMax.x, blobMax.y, mPaintGreen);
 
             final float tanCameraHalfFOV = 28.0f/50.0f;       // horizontal half angle FOV of S5 camera is atan(28/50) or about 29.25 degrees
 
@@ -167,7 +171,7 @@ class GoToBlockGuideStep extends AutoLib.MotorGuideStep implements SetPosterizer
             double distance = -1;                                           // distance to block in inches --- -1 means "don't know"
             final int minBlockSize = 10;                                    // minimum pixel count for credible block detection
             if (count > minBlockSize) {
-                double blockSize = Math.sqrt(count);                        // approximate edge length of block in pixels
+                double blockSize = blobMax.y - blobMin.y;                   // height is best measure of edge length of block in pixels
                 double viewFrac = blockSize/mBmOut.getWidth();
                 distance = 2.0f / viewFrac;                                 // distance to block given it is 2" wide;
                 mOpMode.telemetry.addData("distance (in)", distance);
@@ -250,6 +254,22 @@ public class RoverRuckusGoToBlock1 extends OpMode implements SetBitmap {
         mBitmap = b;
     }
 
+    boolean getHardware(AutoLib.HardwareFactory mf, DcMotor[] motors) {
+        // get the motors: depending on the factory we are given, these may be
+        // either dummy motors that just log data or real ones that drive the hardware
+        // assumed order is fr, br, fl, bl
+        try {
+            motors[0] = mf.getDcMotor("fr");
+            motors[1] = mf.getDcMotor("br");
+            motors[2] = mf.getDcMotor("fl");
+            motors[3] = mf.getDcMotor("bl");
+            return true;
+        }
+        catch (Exception c) {
+            return false;
+        }
+    }
+
     public void init() {
         init(false);    // for now, red/blue doesn't matter
     }
@@ -257,21 +277,20 @@ public class RoverRuckusGoToBlock1 extends OpMode implements SetBitmap {
     public void init(boolean bLookForBlue)
     {
         // get the hardware
-        AutoLib.HardwareFactory mf = null;
-        final boolean debug = true;
-        if (debug)
-            mf = new AutoLib.TestHardwareFactory(this);
-        else
-            mf = new AutoLib.RealHardwareFactory(this);
-
-        // get the motors: depending on the factory we created above, these may be
-        // either dummy motors that just log data or real ones that drive the hardware
-        // assumed order is fr, br, fl, bl
         mMotors = new DcMotor[4];
-        mMotors[0] = mf.getDcMotor("fr");
-        mMotors[1] = mf.getDcMotor("br");
-        (mMotors[2] = mf.getDcMotor("fl")).setDirection(DcMotor.Direction.REVERSE);
-        (mMotors[3] = mf.getDcMotor("bl")).setDirection(DcMotor.Direction.REVERSE);
+        if (!getHardware(new AutoLib.RealHardwareFactory(this), mMotors)) {
+            getHardware(new AutoLib.TestHardwareFactory(this), mMotors);
+        }
+
+        boolean invertLeft = false;     // current ratbot ...
+        if (invertLeft) {
+            mMotors[2].setDirection(DcMotor.Direction.REVERSE);
+            mMotors[3].setDirection(DcMotor.Direction.REVERSE);
+        }
+        else {
+            mMotors[0].setDirection(DcMotor.Direction.REVERSE);
+            mMotors[1].setDirection(DcMotor.Direction.REVERSE);
+        }
 
         // best to do this now, which is called from opmode's init() function
         mVLib = new VuforiaLib_RoverRuckus();
@@ -280,7 +299,15 @@ public class RoverRuckusGoToBlock1 extends OpMode implements SetBitmap {
         // create the root Sequence for this autonomous OpMode
         mSequence = new AutoLib.LinearSequence();
         // make a step that will steer the robot given guidance from the GoToBlockGuideStep
-        AutoLib.MotorGuideStep motorGuideStep = new AutoLib.ErrorGuideStep(this, null, null, 0.6f);
+
+            // construct a PID controller for correcting heading errors
+            final float Kp = 0.005f;        // degree heading proportional term correction per degree of deviation
+            final float Ki = 0.005f;        // ... integrator term
+            final float Kd = 0.0f;         // ... derivative term
+            final float KiCutoff = 0.0f;   // maximum angle error for which we update integrator
+            SensorLib.PID pid = new SensorLib.PID(Kp, Ki, Kd, KiCutoff);
+
+        AutoLib.MotorGuideStep motorGuideStep = new AutoLib.ErrorGuideStep(this, pid, null, 0.1f);
         // make a step that analyzes a camera image from Vuforia and steers toward the biggest orange blob, presumably the block.
         // it uses a ErrorGuideStep to process the heading error it computes into motor steering commands.
         mGuideStep  = new GoToBlockGuideStep(this, this, mVLib, motorGuideStep);

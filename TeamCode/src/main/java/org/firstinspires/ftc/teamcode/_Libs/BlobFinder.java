@@ -74,10 +74,15 @@ public class BlobFinder {
         return bbCount;
     }
 
-    // get x and y of blob centroid
-    public Point getOrigin() { return bbOrigin; }
+    // get x and y of blob centroid and limit points
     public Point getCentroid() {
         return new Point((bbMin.x+bbMax.x)/2, (bbMin.y+bbMax.y)/2);
+    }
+    public Point getBoundsMin() {
+        return bbMin;
+    }
+    public Point getBoundsMax() {
+        return bbMax;
     }
 
     // This is the deep search function - compute the number of connected pixels of

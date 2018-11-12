@@ -263,7 +263,7 @@ public class RoverRuckusGoToBlock1 extends OpMode implements SetBitmap {
             motors[1] = mf.getDcMotor("br");
             motors[2] = mf.getDcMotor("fl");
             motors[3] = mf.getDcMotor("bl");
-            return true;
+            return (motors[0]!=null && motors[1]!=null && motors[2]!=null && motors[3]!=null);
         }
         catch (Exception c) {
             return false;

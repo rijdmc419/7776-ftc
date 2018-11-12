@@ -171,7 +171,7 @@ class GoToBlockGuideStep extends AutoLib.MotorGuideStep implements SetPosterizer
             double distance = -1;                                           // distance to block in inches --- -1 means "don't know"
             final int minBlockSize = 10;                                    // minimum pixel count for credible block detection
             if (count > minBlockSize) {
-                double blockSize = blobMax.y - blobMin.y;                   // height is best measure of edge length of block in pixels
+                double blockSize = blobMax.x - blobMin.x;                   // width is best measure of edge length of block in pixels since height is frame-limited
                 double viewFrac = blockSize/mBmOut.getWidth();
                 distance = 2.0f / viewFrac;                                 // distance to block given it is 2" wide;
                 mOpMode.telemetry.addData("distance (in)", distance);
@@ -193,7 +193,7 @@ class GoToBlockGuideStep extends AutoLib.MotorGuideStep implements SetPosterizer
             }
 
             // when we're really close ...
-            if (distance > 0  &&  distance < 6) {          // for now, stop at 6" from block
+            if (distance > 0  &&  distance < 4) {          // for now, stop at 4" from block
                 // require completion test to pass some min number of times in a row to believe it
                 mDoneCount++;
                 if (mDoneCount >= minDoneCount) {
@@ -376,7 +376,7 @@ public class RoverRuckusGoToBlock1 extends OpMode implements SetBitmap {
         super.stop();
         if (mRsPosterize != null)
             mRsPosterize.destroyScript();
-        mVLib.stop();       // Vuforia claims to do this automatically on OpMode stop but ...
+        //mVLib.stop();       // Vuforia claims to do this automatically on OpMode stop but ...
         mView.post(new Runnable() {
             @Override
             public void run() {

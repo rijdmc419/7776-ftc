@@ -113,15 +113,6 @@ uchar RS_KERNEL orangeHue(uchar v) {
 }
 #endif
 
-#if 0
-uchar RS_KERNEL closeTo(uchar h1, uchar h2, uchar diff) {
-    uchar rc = 0;
-    uchar d = (h1>h2) ? h1-h2 : h2-h1;
-    if (d < diff)
-        rc = 1;
-    return rc;
-}
-#endif
 
 /**
  * our regular 8 bit per channel RGB kernel
@@ -133,12 +124,12 @@ uchar3 RS_KERNEL myKernelRgb(uchar3 in, uint32_t x, uint32_t y) {
     uchar s = hsv.s1;
     uchar v = hsv.s2;
     uchar oH = orangeHue(v);
-    uchar dH = 0;
+    uchar dH = 0;                 // dH = abs(h-oH)
     if (h > oH)
         dH = h-oH;
     else
         dH = oH-h;
-    if (s > 150 &&                // if saturation is convincing ...
+    if (s > 200 &&                // if saturation is convincing ...
         dH < 4)                   // and hue adjusted for value is close to "orange" ...
     {
         out = toU3(0xFFFF00);     // yellow

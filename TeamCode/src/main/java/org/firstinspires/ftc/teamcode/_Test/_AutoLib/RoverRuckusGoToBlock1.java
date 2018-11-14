@@ -104,11 +104,13 @@ class GoToBlockGuideStep extends AutoLib.MotorGuideStep implements SetPosterizer
         // create stuff we'll use to draw debug info overlays on the image
         mPaintRed = new Paint();
         mPaintRed.setColor(Color.RED);
+        mPaintRed.setStyle(Paint.Style.STROKE);
         mPaintGreen = new Paint();
         mPaintGreen.setColor(Color.GREEN);
         mPaintGreen.setStyle(Paint.Style.STROKE);
         mPaintBlue = new Paint();
         mPaintBlue.setColor(Color.BLUE);
+        mPaintBlue.setStyle(Paint.Style.STROKE);
     }
 
     public void set(ArrayList<AutoLib.SetPower> motorSteps){
@@ -122,8 +124,12 @@ class GoToBlockGuideStep extends AutoLib.MotorGuideStep implements SetPosterizer
     public boolean loop() {
         super.loop();
 
+        // phone orientation: depends on robot configuration
+        final boolean bCameraOnRight = true;
+
         // get most recent frame from camera (through Vuforia)
-        RectF rect = new RectF(0,0.5f,1.0f,1.0f);        // use bottom half of frame
+        RectF rect = bCameraOnRight ? new RectF(0,0f,1.0f,0.5f)        // use bottom half of frame
+                                    : new RectF(0,0.5f,1.0f,1.0f);
         Bitmap bmIn = mVLib.getBitmap(rect, 4);                      // get cropped, downsampled image from Vuforia
 
         if (bmIn != null) {
@@ -137,8 +143,7 @@ class GoToBlockGuideStep extends AutoLib.MotorGuideStep implements SetPosterizer
             mRsPosterizer.runScript(bmIn, bmOut);
 
             // optionally rotate image 180 degrees if phone orientation makes it upside down
-            final boolean bUpsideDown = true;       // depends on robot configuration
-            if (bUpsideDown)
+            if (bCameraOnRight)
                 mBmOut = RotateBitmap(bmOut, 180);
             else
                 mBmOut = bmOut;
@@ -156,40 +161,53 @@ class GoToBlockGuideStep extends AutoLib.MotorGuideStep implements SetPosterizer
             mOpMode.telemetry.addData("blob count", count);
             mOpMode.telemetry.addData("centroid", centroid.x + "," + centroid.y);
 
+            Point blobMin = bf.getBoundsMin();
+            Point blobMax = bf.getBoundsMax();
+
+            // determine if detected blob has an aspect ratio that is reasonable for a block
+            int dx = Math.abs(blobMin.x-blobMax.x);
+            int dy = Math.abs(blobMin.y-blobMax.y);
+            float maxAspect = 1.6f;
+            boolean bAspectOkay = (dx < maxAspect*dy) && (dy < maxAspect*dx);
+
             // add annotations to the bitmap showing detected blob center and limits
-            final int XS=5;     // cross size
+            final int XS = 5;     // cross size
             Canvas canvas = new Canvas(mBmOut);
             canvas.drawLine(centroid.x-XS, centroid.y, centroid.x+XS, centroid.y, mPaintGreen);
             canvas.drawLine(centroid.x, centroid.y-XS, centroid.x, centroid.y+XS, mPaintGreen);
-            Point blobMin = bf.getBoundsMin();
-            Point blobMax = bf.getBoundsMax();
-            canvas.drawRect(blobMin.x, blobMin.y, blobMax.x, blobMax.y, mPaintGreen);
+            canvas.drawRect(blobMin.x, blobMin.y, blobMax.x, blobMax.y, bAspectOkay ? mPaintGreen : mPaintRed);
 
             final float tanCameraHalfFOV = 28.0f/50.0f;       // horizontal half angle FOV of S5 camera is atan(28/50) or about 29.25 degrees
-
-            // estimate distance from the block by its size in the camera image
             double distance = -1;                                           // distance to block in inches --- -1 means "don't know"
-            final int minBlockSize = 10;                                    // minimum pixel count for credible block detection
-            if (count > minBlockSize) {
-                double blockSize = blobMax.x - blobMin.x;                   // width is best measure of edge length of block in pixels since height is frame-limited
-                double viewFrac = blockSize/mBmOut.getWidth();
-                distance = 2.0f / viewFrac;                                 // distance to block given it is 2" wide;
-                mOpMode.telemetry.addData("distance (in)", distance);
 
-                // the above computed target point should be in the middle of the image if we're on course -
-                // if not, correct our course to center it --
-                // compute fractional error = fraction of image offset of target from center = [-1 .. +1]
-                float error = ((float)centroid.x - (float)mBmOut.getWidth()/2.0f) / ((float)mBmOut.getWidth()/2.0f);
+            // if we're probably really seeing the block (and not some other goo in the image), estimate distance and steer toward it
+            // unfortunately, this strategy also turns off guidance when we're close enough that the block is bigger than the image height.
+            // so check for that, and also where the block is made more rectangular because it's off the top of bottom of the view, too.
+            boolean bBlockAtEdgeOfFrameH = (blobMin.y <= 0) || (blobMax.y >= mBmOut.getHeight()-1);
+            if (bAspectOkay || bBlockAtEdgeOfFrameH) {
+                // estimate distance from the block by its size in the camera image
+                final int minBlockSize = 10;                                    // minimum pixel count for credible block detection
+                if (count > minBlockSize) {
+                    double blockSize = blobMax.x - blobMin.x;                   // width is best measure of edge length of block in pixels since height is frame-limited
+                    double viewFrac = blockSize/mBmOut.getWidth();
+                    distance = 2.0f / viewFrac;                                 // distance to block given it is 2" wide;
+                    mOpMode.telemetry.addData("distance (in)", distance);
 
-                // compute motor correction from error through PID --
-                // for now, convert image-pixel error to angle in degrees --
-                // image coordinates are positive to the right but angles are positive to the left (CCW)
-                float angError = (float)(Math.atan(error * tanCameraHalfFOV) * 180.0/Math.PI);
-                mOpMode.telemetry.addData("data", "error=%f angError=%f", error, angError);
+                    // the above computed target point should be in the middle of the image if we're on course -
+                    // if not, correct our course to center it --
+                    // compute fractional error = fraction of image offset of target from center = [-1 .. +1]
+                    float error = ((float)centroid.x - (float)mBmOut.getWidth()/2.0f) / ((float)mBmOut.getWidth()/2.0f);
 
-                // tell the subsidiary motor guide step which way to steer -- the heading (orientation) will either be
-                // constant (squirrely wheels) or change to match the direction, depending on the motor guide step we're given.
-                ((AutoLib.SetDirectionHeadingPower)mMotorGuideStep).setRelativeDirection(angError);
+                    // compute motor correction from error through PID --
+                    // for now, convert image-pixel error to angle in degrees --
+                    // image coordinates are positive to the right but angles are positive to the left (CCW)
+                    float angError = (float)(Math.atan(error * tanCameraHalfFOV) * 180.0/Math.PI);
+                    mOpMode.telemetry.addData("data", "error=%f angError=%f", error, angError);
+
+                    // tell the subsidiary motor guide step which way to steer -- the heading (orientation) will either be
+                    // constant (squirrely wheels) or change to match the direction, depending on the motor guide step we're given.
+                    ((AutoLib.SetDirectionHeadingPower)mMotorGuideStep).setRelativeDirection(angError);
+                }
             }
 
             // when we're really close ...

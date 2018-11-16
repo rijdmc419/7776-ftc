@@ -124,11 +124,8 @@ class GoToBlockGuideStep extends AutoLib.MotorGuideStep implements SetPosterizer
     public boolean loop() {
         super.loop();
 
-        // phone orientation: depends on robot configuration
-        final boolean bCameraOnRight = true;
-
         // get most recent frame from camera (through Vuforia)
-        RectF rect = bCameraOnRight ? new RectF(0,0f,1.0f,0.5f)        // use bottom half of frame
+        RectF rect = mCameraOnRight ? new RectF(0,0f,1.0f,0.5f)        // use bottom half of frame
                                     : new RectF(0,0.5f,1.0f,1.0f);
         Bitmap bmIn = mVLib.getBitmap(rect, 4);                      // get cropped, downsampled image from Vuforia
 
@@ -143,7 +140,7 @@ class GoToBlockGuideStep extends AutoLib.MotorGuideStep implements SetPosterizer
             mRsPosterizer.runScript(bmIn, bmOut);
 
             // optionally rotate image 180 degrees if phone orientation makes it upside down
-            if (bCameraOnRight)
+            if (mCameraOnRight)
                 mBmOut = RotateBitmap(bmOut, 180);
             else
                 mBmOut = bmOut;
@@ -184,13 +181,14 @@ class GoToBlockGuideStep extends AutoLib.MotorGuideStep implements SetPosterizer
             // unfortunately, this strategy also turns off guidance when we're close enough that the block is bigger than the image height.
             // so check for that, and also where the block is made more rectangular because it's off the top of bottom of the view, too.
             boolean bBlockAtEdgeOfFrameH = (blobMin.y <= 0) || (blobMax.y >= mBmOut.getHeight()-1);
-            if (bAspectOkay || bBlockAtEdgeOfFrameH) {
+            boolean bAlways = false;
+            if (bAlways || bAspectOkay || bBlockAtEdgeOfFrameH) {
                 // estimate distance from the block by its size in the camera image
                 final int minBlockSize = 10;                                    // minimum pixel count for credible block detection
                 if (count > minBlockSize) {
                     double blockSize = blobMax.x - blobMin.x;                   // width is best measure of edge length of block in pixels since height is frame-limited
                     double viewFrac = blockSize/mBmOut.getWidth();
-                    distance = 2.0f / viewFrac;                                 // distance to block given it is 2" wide;
+                    distance = 2.0f / (viewFrac*2*tanCameraHalfFOV);            // distance to block given it is 2" wide;
                     mOpMode.telemetry.addData("distance (in)", distance);
 
                     // the above computed target point should be in the middle of the image if we're on course -
@@ -211,7 +209,7 @@ class GoToBlockGuideStep extends AutoLib.MotorGuideStep implements SetPosterizer
             }
 
             // when we're really close ...
-            if (distance > 0  &&  distance < 4) {          // for now, stop at 4" from block
+            if (distance > 0  &&  distance < 16) {          // for now, complete this step at this distance from block
                 // require completion test to pass some min number of times in a row to believe it
                 mDoneCount++;
                 if (mDoneCount >= minDoneCount) {
@@ -300,7 +298,7 @@ public class RoverRuckusGoToBlock1 extends OpMode implements SetBitmap {
             getHardware(new AutoLib.TestHardwareFactory(this), mMotors);
         }
 
-        boolean invertLeft = false;     // current ratbot ...
+        boolean invertLeft = true;     // current ratbot ...
         if (invertLeft) {
             mMotors[2].setDirection(DcMotor.Direction.REVERSE);
             mMotors[3].setDirection(DcMotor.Direction.REVERSE);
@@ -318,21 +316,22 @@ public class RoverRuckusGoToBlock1 extends OpMode implements SetBitmap {
         mSequence = new AutoLib.LinearSequence();
         // make a step that will steer the robot given guidance from the GoToBlockGuideStep
 
-            // construct a PID controller for correcting heading errors
-            final float Kp = 0.005f;        // degree heading proportional term correction per degree of deviation
-            final float Ki = 0.005f;        // ... integrator term
-            final float Kd = 0.0f;         // ... derivative term
-            final float KiCutoff = 0.0f;   // maximum angle error for which we update integrator
-            SensorLib.PID pid = new SensorLib.PID(Kp, Ki, Kd, KiCutoff);
+        // construct a PID controller for correcting heading errors
+        final float Kp = 0.005f;        // degree heading proportional term correction per degree of deviation
+        final float Ki = 0.005f;        // ... integrator term
+        final float Kd = 0.0f;         // ... derivative term
+        final float KiCutoff = 0.0f;   // maximum angle error for which we update integrator
+        SensorLib.PID pid = new SensorLib.PID(Kp, Ki, Kd, KiCutoff);
 
-        AutoLib.MotorGuideStep motorGuideStep = new AutoLib.ErrorGuideStep(this, pid, null, 0.1f);
+        final float power = 0.2f;
+        AutoLib.MotorGuideStep motorGuideStep = new AutoLib.ErrorGuideStep(this, pid, null, power);
         // make a step that analyzes a camera image from Vuforia and steers toward the biggest orange blob, presumably the block.
         // it uses a ErrorGuideStep to process the heading error it computes into motor steering commands.
         mGuideStep  = new GoToBlockGuideStep(this, this, mVLib, motorGuideStep);
         // make and add the Step that combines all of the above to go to the orange block
         mSequence.add(new AutoLib.GuidedTerminatedDriveStep(this, mGuideStep, motorGuideStep, mMotors));
-        // make and add a step that tells us we're done
-        mSequence.add(new AutoLib.LogTimeStep(this,"Done!", 5));
+        // continue on unguided for 1 sec and then stop all motors
+        mSequence.add(new AutoLib.MoveByTimeStep(mMotors, power, 2, true));
 
         mView = (ImageView)((Activity)hardwareMap.appContext).findViewById(com.qualcomm.ftcrobotcontroller.R.id.OpenCVOverlay);
         mView.post(new Runnable() {

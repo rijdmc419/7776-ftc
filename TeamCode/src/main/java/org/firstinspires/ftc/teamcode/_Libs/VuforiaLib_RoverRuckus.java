@@ -299,6 +299,11 @@ public class VuforiaLib_RoverRuckus implements HeadingSensor, LocationSensor {
         mCF = null;
     }
 
+    public void lightOn(boolean bLightOn) {
+        // turn on the flashlight
+        com.vuforia.CameraDevice.getInstance().setFlashTorchMode(bLightOn);
+    }
+
     public void start()
     {
         /** Start tracking the data sets we care about. */

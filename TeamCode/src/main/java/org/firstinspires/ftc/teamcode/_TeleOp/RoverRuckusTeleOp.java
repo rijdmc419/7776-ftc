@@ -18,14 +18,19 @@ import java.text.DecimalFormat;
 public class RoverRuckusTeleOp extends OpMode{
     RoverRuckusHardware robot =  new RoverRuckusHardware();
     double left, right;
-    double speedFactor = 0.5;
+
+    double speedFactor;
     double liftSpeed = 1;
-    int brakeCount = 0;
-    boolean liftBrake = false;
     DecimalFormat printFormat = new DecimalFormat ("#.###");
+
+   // boolean brakeLast;
+   // boolean brake;
+
     @Override
     public void init() {
         robot.init(hardwareMap);
+      //  brakeLast = false;
+    //    brake = true;
     }
 
     @Override
@@ -33,42 +38,40 @@ public class RoverRuckusTeleOp extends OpMode{
         if(gamepad1.left_bumper && !gamepad1.right_bumper) //Drivetrain Speed Controls
             speedFactor = 1;
         else if(gamepad1.right_bumper && !gamepad1.left_bumper)
-            speedFactor = 0.25;
+            speedFactor = 0.1;
         else if(!gamepad1.right_bumper && !gamepad1.left_bumper)
-            speedFactor = 0.5;
+            speedFactor = 0.55;
 
-        if(gamepad2.left_bumper && !gamepad2.right_bumper) {//Lift Controls
-            robot.lift.setPower(liftSpeed);
-            robot.lift2.setPower(liftSpeed);}
-        else if(gamepad2.right_bumper && !gamepad2.left_bumper){
-        robot.lift.setPower(-1);
-        robot.lift2.setPower(-1 * liftSpeed); }
-        else if(!gamepad2.right_bumper && !gamepad2.left_bumper){
-            robot.lift.setPower(0);
-            robot.lift2.setPower(0); }
+        if(gamepad2.b) {
+            robot.lift.setPower(1);
+            robot.lift2.setPower(1);
+        }
 
-        if(gamepad2.b) {//Lift Controls
-            robot.lift.setPower(0);
-            robot.lift2.setPower(0);}
-
-
+        //boolean brakePressed = gamepad2.b;
+        //if(brakePressed && !brakeLast){
+         //   brake = !brake;
+       //     if(brake) liftSpeed = 1;
+         //   else liftSpeed =
+       // }
+    //    brakeLast = brakePressed;
 
         left = (-1)* Math.pow(gamepad1.left_stick_y, 3) * speedFactor;
         right = (-1)* Math.pow(gamepad1.right_stick_y, 3) * speedFactor;
+        liftSpeed =  Math.pow(gamepad2.right_stick_y, 3);
 
         robot.fl.setPower(left);
         robot.bl.setPower(left);
         robot.fr.setPower(right);
         robot.br.setPower(right);
+        robot.lift.setPower(liftSpeed);
+        robot.lift2.setPower(liftSpeed);
 
         //telemetry.addData("Gamepad 1: ", gamepad1);
         //telemetry.addData("Gamepad 2:", gamepad2);
         telemetry.addData("Speed Factor: ", printFormat.format(speedFactor));
         telemetry.addData("Left: ", printFormat.format(left));
         telemetry.addData("Right: ", printFormat.format(right));
-        telemetry.addData("Lift Motor 1: ", printFormat.format(robot.lift.getPower()));
-        telemetry.addData("Lift Motor 2: ", printFormat.format(robot.lift2.getPower()));
-        telemetry.addData("Lift Braked: ", gamepad2.b);
-
+        telemetry.addData("Lift Power: ", printFormat.format(liftSpeed));
+      //  telemetry.addData("Lift Brake? ", brake);
     }
 }

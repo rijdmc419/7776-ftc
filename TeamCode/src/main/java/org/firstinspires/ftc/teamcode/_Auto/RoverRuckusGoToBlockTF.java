@@ -106,6 +106,7 @@ class GoToBlockGuideStep extends AutoLib.MotorGuideStep {
         super.loop();
 
         float distance = -1;
+        float angError = 0;
 
         TFObjectDetector tfod = mVLib.getTfod();
         if (tfod != null) {
@@ -149,7 +150,7 @@ class GoToBlockGuideStep extends AutoLib.MotorGuideStep {
                     // compute motor correction from error through PID --
                     // for now, convert image-pixel error to angle in degrees --
                     // image coordinates are positive to the right but angles are positive to the left (CCW)
-                    float angError = (float) (Math.atan(error * tanCameraHalfFOV) * 180.0 / Math.PI);
+                    angError = (float) (Math.atan(error * tanCameraHalfFOV) * 180.0 / Math.PI);
                     mOpMode.telemetry.addData("data", "error=%f angError=%f", error, angError);
 
                     // tell the subsidiary motor guide step which way to steer -- the heading (orientation) will either be
@@ -160,10 +161,9 @@ class GoToBlockGuideStep extends AutoLib.MotorGuideStep {
 
         }
 
-        // when we're really close ...
-        if (distance > 0) {             // have valid distance data ...
-            mOpMode.telemetry.addData("distance (in)", distance);
-            if (distance < 16) {          // for now, complete this step at this distance from block
+        // when we're more or less pointing at the block ...
+        if (angError != 0) {             // have valid direction data ...
+            if (Math.abs(angError) < 5.0f) {       // for now, complete this step when we're more or less pointed at block
                 // require completion test to pass some min number of times in a row to believe it
                 mDoneCount++;
                 if (mDoneCount >= minDoneCount) {
@@ -245,21 +245,22 @@ public class RoverRuckusGoToBlockTF extends OpMode  {
         // make a step that will steer the robot given guidance from the GoToBlockGuideStep
 
         // construct a PID controller for correcting heading errors
-        final float Kp = 0.005f;        // degree heading proportional term correction per degree of deviation
-        final float Ki = 0.005f;        // ... integrator term
+        final float Kp = 0.01f;        // degree heading proportional term correction per degree of deviation
+        final float Ki = 0.05f;        // ... integrator term
         final float Kd = 0.0f;         // ... derivative term
-        final float KiCutoff = 0.0f;   // maximum angle error for which we update integrator
+        final float KiCutoff = 10.0f;   // maximum angle error for which we update integrator
         SensorLib.PID pid = new SensorLib.PID(Kp, Ki, Kd, KiCutoff);
 
-        final float power = 0.2f;
-        AutoLib.MotorGuideStep motorGuideStep = new AutoLib.ErrorGuideStep(this, pid, null, power);
+        // turn in place to face target
+        AutoLib.ErrorGuideStep motorGuideStep = new AutoLib.ErrorGuideStep(this, pid, null, 0);
+        motorGuideStep.setMaxPower(0.25f);
         // make a step that analyzes a camera image from Vuforia and steers toward the biggest orange blob, presumably the block.
         // it uses a ErrorGuideStep to process the heading error it computes into motor steering commands.
         mGuideStep  = new GoToBlockGuideStep(this, mVLib, motorGuideStep);
         // make and add the Step that combines all of the above to go to the orange block
         mSequence.add(new AutoLib.GuidedTerminatedDriveStep(this, mGuideStep, motorGuideStep, mMotors));
         // continue on unguided for 1 sec and then stop all motors
-        mSequence.add(new AutoLib.MoveByTimeStep(mMotors, power, 2,true));
+        mSequence.add(new AutoLib.MoveByTimeStep(mMotors, 0.25f, 2,true));
     }
 
     @Override public void start()
@@ -269,6 +270,9 @@ public class RoverRuckusGoToBlockTF extends OpMode  {
 
         // start Vuforia scanning
         mVLib.start();
+
+        // optionally turn on the flashlight
+        // mVLib.lightOn(true);
 
         /** Activate Tensor Flow Object Detection. */
         TFObjectDetector tfod = mVLib.initTfod(this);

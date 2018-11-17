@@ -175,7 +175,8 @@ class GoToBlockGuideStep extends AutoLib.MotorGuideStep implements SetPosterizer
             canvas.drawRect(blobMin.x, blobMin.y, blobMax.x, blobMax.y, bAspectOkay ? mPaintGreen : mPaintRed);
 
             final float tanCameraHalfFOV = 28.0f/50.0f;       // horizontal half angle FOV of S5 camera is atan(28/50) or about 29.25 degrees
-            double distance = -1;                                           // distance to block in inches --- -1 means "don't know"
+            float distance = -1;                                           // distance to block in inches --- -1 means "don't know"
+            float angError = 0;
 
             // if we're probably really seeing the block (and not some other goo in the image), estimate distance and steer toward it
             // unfortunately, this strategy also turns off guidance when we're close enough that the block is bigger than the image height.
@@ -186,8 +187,8 @@ class GoToBlockGuideStep extends AutoLib.MotorGuideStep implements SetPosterizer
                 // estimate distance from the block by its size in the camera image
                 final int minBlockSize = 10;                                    // minimum pixel count for credible block detection
                 if (count > minBlockSize) {
-                    double blockSize = blobMax.x - blobMin.x;                   // width is best measure of edge length of block in pixels since height is frame-limited
-                    double viewFrac = blockSize/mBmOut.getWidth();
+                    float blockSize = blobMax.x - blobMin.x;                   // width is best measure of edge length of block in pixels since height is frame-limited
+                    float viewFrac = blockSize/mBmOut.getWidth();
                     distance = 2.0f / (viewFrac*2*tanCameraHalfFOV);            // distance to block given it is 2" wide;
                     mOpMode.telemetry.addData("distance (in)", distance);
 
@@ -199,7 +200,7 @@ class GoToBlockGuideStep extends AutoLib.MotorGuideStep implements SetPosterizer
                     // compute motor correction from error through PID --
                     // for now, convert image-pixel error to angle in degrees --
                     // image coordinates are positive to the right but angles are positive to the left (CCW)
-                    float angError = (float)(Math.atan(error * tanCameraHalfFOV) * 180.0/Math.PI);
+                    angError = (float)(Math.atan(error * tanCameraHalfFOV) * 180.0/Math.PI);
                     mOpMode.telemetry.addData("data", "error=%f angError=%f", error, angError);
 
                     // tell the subsidiary motor guide step which way to steer -- the heading (orientation) will either be
@@ -208,18 +209,18 @@ class GoToBlockGuideStep extends AutoLib.MotorGuideStep implements SetPosterizer
                 }
             }
 
-            // when we're really close ...
-            if (distance > 0  &&  distance < 16) {          // for now, complete this step at this distance from block
-                // require completion test to pass some min number of times in a row to believe it
-                mDoneCount++;
-                if (mDoneCount >= minDoneCount) {
-                    // return "done" -- assume the next step will stop motors if needed
-                    return true;
-                }
+            // when we're more or less pointing at the block ...
+            if (angError != 0) {             // have valid direction data ...
+                if (Math.abs(angError) < 3.0f) {       // for now, complete this step when we're more or less pointed at block
+                    // require completion test to pass some min number of times in a row to believe it
+                    mDoneCount++;
+                    if (mDoneCount >= minDoneCount) {
+                        // return "done" -- assume the next step will stop motors if needed
+                        return true;
+                    }
+                } else
+                    mDoneCount = 0;         // reset the "done" counter
             }
-            else
-                mDoneCount = 0;         // reset the "done" counter
-
             mOpMode.telemetry.addData("data", "doneCount=%d", mDoneCount);
 
             // tell the calling opMode about the bitmap so it can display it

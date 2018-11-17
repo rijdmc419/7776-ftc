@@ -1146,6 +1146,14 @@ public class AutoLib {
                 this.add(new EncoderMotorStep(bl, power, count, stop));
         }
 
+        public MoveByEncoderStep(DcMotor fr, DcMotor br, double power, int count, boolean stop)
+        {
+            if (fr != null)
+                this.add(new EncoderMotorStep(fr, power, count, stop));
+            if (br != null)
+                this.add(new EncoderMotorStep(br, power, count, stop));
+        }
+
         public MoveByEncoderStep(DcMotor motors[], double power, int count, boolean stop)
         {
             for (DcMotor em : motors)

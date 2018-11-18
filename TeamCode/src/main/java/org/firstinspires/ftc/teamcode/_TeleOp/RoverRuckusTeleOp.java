@@ -2,6 +2,7 @@ package org.firstinspires.ftc.teamcode._TeleOp;
 
 import com.qualcomm.robotcore.eventloop.opmode.OpMode;
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
+import com.qualcomm.robotcore.hardware.DcMotor;
 
 import org.firstinspires.ftc.teamcode._Libs.hardware.RoverRuckusHardware;
 
@@ -21,57 +22,84 @@ public class RoverRuckusTeleOp extends OpMode{
 
     double speedFactor;
     double liftSpeed = 1;
-    DecimalFormat printFormat = new DecimalFormat ("#.###");
 
-   // boolean brakeLast;
-   // boolean brake;
+   boolean brakeLast;
+   boolean brake;
 
     @Override
     public void init() {
         robot.init(hardwareMap);
-      //  brakeLast = false;
-    //    brake = true;
+        brakeLast = false;
+        brake = false;
+    }
+
+    @Override
+    public  void start() {
+       telemetry.addData("Lift Brake?", brake);
     }
 
     @Override
     public void loop() {
-        if(gamepad1.left_bumper && !gamepad1.right_bumper) //Drivetrain Speed Controls
-            speedFactor = 1;
-        else if(gamepad1.right_bumper && !gamepad1.left_bumper)
-            speedFactor = 0.1;
-        else if(!gamepad1.right_bumper && !gamepad1.left_bumper)
-            speedFactor = 0.55;
+        driveTrainSpeed();
+        liftBrake();
 
-        if(gamepad2.b) {
-            robot.lift.setPower(1);
-            robot.lift2.setPower(1);
-        }
+        left = -Math.pow(gamepad1.left_stick_y, 3) * speedFactor;
+        right = -Math.pow(gamepad1.right_stick_y, 3) * speedFactor;
 
-        //boolean brakePressed = gamepad2.b;
-        //if(brakePressed && !brakeLast){
-         //   brake = !brake;
-       //     if(brake) liftSpeed = 1;
-         //   else liftSpeed =
-       // }
-    //    brakeLast = brakePressed;
+        if (brake == true)
+            liftSpeed = 1;
+        else
+            liftSpeed =  -Math.pow(gamepad2.left_stick_y, 3);
 
-        left = (-1)* Math.pow(gamepad1.left_stick_y, 3) * speedFactor;
-        right = (-1)* Math.pow(gamepad1.right_stick_y, 3) * speedFactor;
-        liftSpeed =  Math.pow(gamepad2.right_stick_y, 3);
+        powSet();
+        telemetry();
+    }
 
+    void telemetry(){
+        DecimalFormat printFormat = new DecimalFormat ("#.###");
+
+        //telemetry.addData("Gamepad 1", gamepad1);
+        //telemetry.addData("Gamepad 2", gamepad2);
+        telemetry.addData("Lift Pos",robot.lift.getCurrentPosition());
+        telemetry.addData("Lift2 Pos",robot.lift2.getCurrentPosition());
+        telemetry.addData("Speed Factor", printFormat.format(speedFactor));
+        telemetry.addData("Left", printFormat.format(left));
+        telemetry.addData("Right", printFormat.format(right));
+        telemetry.addData("Lift Power", printFormat.format(liftSpeed));
+        telemetry.addData("Lift Brake?", brake);
+    }
+
+    void powSet() {
         robot.fl.setPower(left);
         robot.bl.setPower(left);
         robot.fr.setPower(right);
         robot.br.setPower(right);
         robot.lift.setPower(liftSpeed);
         robot.lift2.setPower(liftSpeed);
-
-        //telemetry.addData("Gamepad 1: ", gamepad1);
-        //telemetry.addData("Gamepad 2:", gamepad2);
-        telemetry.addData("Speed Factor: ", printFormat.format(speedFactor));
-        telemetry.addData("Left: ", printFormat.format(left));
-        telemetry.addData("Right: ", printFormat.format(right));
-        telemetry.addData("Lift Power: ", printFormat.format(liftSpeed));
-      //  telemetry.addData("Lift Brake? ", brake);
     }
+
+    void driveTrainSpeed(){
+        if(gamepad1.left_bumper && !gamepad1.right_bumper) //Drivetrain Speed Controls
+         speedFactor = 1;
+       else if(gamepad1.right_bumper && !gamepad1.left_bumper)
+          speedFactor = 0.1;
+        else if(!gamepad1.right_bumper && !gamepad1.left_bumper)
+          speedFactor = 0.55;
+    }
+
+    void liftBrake() {
+            boolean brakePressed = gamepad2.b;
+
+            if(brakePressed && !brakeLast){
+               brake = !brake;
+               if(brake) {
+                  //while(robot.lift.getCurrentPosition() <= 540 && robot.lift2.getCurrentPosition() <= 540 && brake) {
+                   liftSpeed = 1;
+            //      }
+               }
+               else liftSpeed = Math.pow(gamepad2.left_stick_y, 3);
+            }
+            brakeLast = brakePressed;
+    }
+
 }

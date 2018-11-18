@@ -21,7 +21,7 @@ public class RoverRuckusTeleOp extends OpMode{
     double left, right;
 
     double speedFactor;
-    double liftSpeed = 1;
+    double liftSpeed = -.5;
 
    boolean brakeLast;
    boolean brake;
@@ -47,7 +47,7 @@ public class RoverRuckusTeleOp extends OpMode{
         right = -Math.pow(gamepad1.right_stick_y, 3) * speedFactor;
 
         if (brake == true)
-            liftSpeed = 1;
+            liftSpeed = -0.5;
         else
             liftSpeed =  -Math.pow(gamepad2.left_stick_y, 3);
 
@@ -88,13 +88,13 @@ public class RoverRuckusTeleOp extends OpMode{
     }
 
     void liftBrake() {
-            boolean brakePressed = gamepad2.b;
+            boolean brakePressed = gamepad2.a;
 
             if(brakePressed && !brakeLast){
                brake = !brake;
                if(brake) {
                   //while(robot.lift.getCurrentPosition() <= 540 && robot.lift2.getCurrentPosition() <= 540 && brake) {
-                   liftSpeed = 1;
+                   liftSpeed = -0.5;
             //      }
                }
                else liftSpeed = Math.pow(gamepad2.left_stick_y, 3);

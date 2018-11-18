@@ -14,11 +14,11 @@ public class RoverRuckusAuto extends OpMode{
 
     public void init() {
         robot.init(hardwareMap);
-        robot.lift.setPower(-1);
-        robot.lift2.setPower(-1);
+        robot.lift.setPower(-.5);
+        robot.lift2.setPower(-.5);
 
         mSeq.add(new AutoLib.MoveByEncoderStep(robot.lift, robot.lift2, 1f, 575, true));
-        mSeq.add(new AutoLib.MoveByEncoderStep(robot.fr, robot.br, robot.fl, robot.bl, 1.0f, 6750, true));
+        mSeq.add(new AutoLib.MoveByEncoderStep(robot.fr, robot.br, robot.fl, robot.bl, 1.0f, 4250, true));
         //mSeq.add(new AutoLib.TurnByEncoderStep(robot.fr, robot.fl, 1.0f, -1.0f, 2000, -2000, true));
     }
 

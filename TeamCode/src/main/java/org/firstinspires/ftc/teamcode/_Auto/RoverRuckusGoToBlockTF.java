@@ -68,6 +68,86 @@ interface SetBitmap {
     public void setBitmap(Bitmap bm);
 }
 
+interface SetErrorAngle {
+    public void setErrorAngle (float angle);
+}
+
+interface SetDistance {
+    public void setDistance(float distance);
+}
+
+// a test Step that needs to pass the test multiple times to actually terminate
+abstract class CountedTestStep extends AutoLib.MotorGuideStep  {
+    int mDoneCount = 0;
+    int mDoneLimit = 0;
+    CountedTestStep(int doneLimit) {
+        mDoneLimit = doneLimit;
+        mDoneCount = 0;
+    }
+    public boolean test(boolean result) {
+        if (result) {       // return true when result is true N times in a row
+            mDoneCount++;
+            if (mDoneCount >= mDoneLimit) {
+                return true;        // return "done" to terminate the super-step
+            }
+        } else
+            mDoneCount = 0;         // reset the "done" counter
+        return false;
+    }
+}
+
+// used by GoToBlockGuideStep to control termination in various different situations
+abstract class CountedDistanceAngleTestStep extends CountedTestStep implements SetErrorAngle, SetDistance, AutoLib.SetMotorSteps {
+    CountedDistanceAngleTestStep(int doneLimit) { super(doneLimit); }
+}
+
+class AngleTerminationStep extends CountedDistanceAngleTestStep {
+    @Override
+    public void setDistance(float distance) {}
+    @Override
+    public void setErrorAngle(float angle) { angError = angle; }
+    @Override
+    public void set(ArrayList<AutoLib.SetPower> motorsteps) {}
+
+    private float angError = 0.0f;
+    private float mAngleLimit;
+
+    public AngleTerminationStep(float angle, int doneLimit) {
+        super(doneLimit);
+        mAngleLimit = angle;
+    }
+
+    public boolean loop() {
+        // when we're more or less pointing at the block ...
+        if (angError != 0)  // have valid data ...
+            return test( Math.abs(angError) < mAngleLimit);
+        return false;       // not done - continue running super-step
+    }
+}
+
+class DistanceTerminationStep extends CountedDistanceAngleTestStep {
+    @Override
+    public void setDistance(float distance) { mDistance = distance; }
+    @Override
+    public void setErrorAngle(float angle) { }
+    @Override
+    public void set(ArrayList<AutoLib.SetPower> motorsteps) {}
+
+    private float mDistance;
+    private float mDistanceLimit;
+
+    public DistanceTerminationStep(float distance, int doneLimit) {
+        super(doneLimit);
+        mDistanceLimit = distance;
+    }
+
+    public boolean loop() {
+        // when we're really close ...
+        if (mDistance > 0)              // have valid distance data ...
+            return test(mDistance < mDistanceLimit);
+        return false;       // not done - continue running super-step
+    }
+}
 
 // this is a guide step that uses camera image data to
 // guide the robot to the indicated bin of the cryptobox
@@ -76,31 +156,28 @@ class GoToBlockGuideStep extends AutoLib.MotorGuideStep {
 
     VuforiaLib_RoverRuckus mVLib;
     OpMode mOpMode;
+    CountedDistanceAngleTestStep mTermTestStep;
 
     final int minDoneCount = 5;         // require "done" test to succeed this many consecutive times
     int mDoneCount;
 
     Point mBmSize = null;
-
-    private static final String LABEL_GOLD_MINERAL = "Gold Mineral";
-
     AutoLib.MotorGuideStep mMotorGuideStep;     // step used to actually control the motors based on directives from this step and gyro input
 
-    boolean mbLookForBlue;
-
     final float tanCameraHalfFOV = 28.0f/50.0f;       // horizontal half angle FOV of S5 camera is atan(28/50) or about 29.25 degrees
+    private static final String LABEL_GOLD_MINERAL = "Gold Mineral";
 
-    public GoToBlockGuideStep(OpMode opMode, VuforiaLib_RoverRuckus VLib, AutoLib.MotorGuideStep motorGuideStep) {
+    public GoToBlockGuideStep(OpMode opMode, VuforiaLib_RoverRuckus VLib, AutoLib.MotorGuideStep motorGuideStep, CountedDistanceAngleTestStep termTestStep) {
         mOpMode = opMode;
         mVLib = VLib;
         mMotorGuideStep = motorGuideStep;
         mDoneCount = 0;
+        mTermTestStep = termTestStep;
     }
 
-    public void set(ArrayList<AutoLib.SetPower> motorSteps){
+    public void set(ArrayList<AutoLib.SetPower> motorSteps) {
         mMotorGuideStep.set(motorSteps);
     }
-
 
     public boolean loop() {
         super.loop();
@@ -156,26 +233,21 @@ class GoToBlockGuideStep extends AutoLib.MotorGuideStep {
                     // tell the subsidiary motor guide step which way to steer -- the heading (orientation) will either be
                     // constant (squirrely wheels) or change to match the direction, depending on the motor guide step we're given.
                     ((AutoLib.SetDirectionHeadingPower) mMotorGuideStep).setRelativeDirection(angError);
+
+                    // run the subsidiary step to actually update the subsidiary motor steps
+                    mMotorGuideStep.loop();
                 }
             }
 
         }
 
-        // when we're more or less pointing at the block ...
-        if (angError != 0) {             // have valid direction data ...
-            if (Math.abs(angError) < 5.0f) {       // for now, complete this step when we're more or less pointed at block
-                // require completion test to pass some min number of times in a row to believe it
-                mDoneCount++;
-                if (mDoneCount >= minDoneCount) {
-                    // return "done" -- assume the next step will stop motors if needed
-                    return true;
-                }
-            } else
-                mDoneCount = 0;         // reset the "done" counter
+        // tell the termination test step about the current angular error and distance to the block
+        if (mTermTestStep != null) {
+            mTermTestStep.setDistance(distance);
+            mTermTestStep.setErrorAngle(angError);
         }
-        mOpMode.telemetry.addData("data", "doneCount=%d", mDoneCount);
 
-        return false;  // haven't found anything yet
+        return true;  // let the termination step control the sequencer
     }
 
     public void stop() {
@@ -251,16 +323,31 @@ public class RoverRuckusGoToBlockTF extends OpMode  {
         final float KiCutoff = 10.0f;   // maximum angle error for which we update integrator
         SensorLib.PID pid = new SensorLib.PID(Kp, Ki, Kd, KiCutoff);
 
-        // turn in place to face target
-        AutoLib.ErrorGuideStep motorGuideStep = new AutoLib.ErrorGuideStep(this, pid, null, 0);
-        motorGuideStep.setMaxPower(0.25f);
+        // turn in place to face target within some error bound
+        AutoLib.ErrorGuideStep motorGuideStep1 = new AutoLib.ErrorGuideStep(this, pid, null, 0);
+        motorGuideStep1.setMaxPower(0.25f);
         // make a step that analyzes a camera image from Vuforia and steers toward the biggest orange blob, presumably the block.
-        // it uses a ErrorGuideStep to process the heading error it computes into motor steering commands.
-        mGuideStep  = new GoToBlockGuideStep(this, mVLib, motorGuideStep);
-        // make and add the Step that combines all of the above to go to the orange block
-        mSequence.add(new AutoLib.GuidedTerminatedDriveStep(this, mGuideStep, motorGuideStep, mMotors));
-        // continue on unguided for 1 sec and then stop all motors
-        mSequence.add(new AutoLib.MoveByTimeStep(mMotors, 0.25f, 2,true));
+        // it uses a ErrorGuideStep to process the heading error it computes into motor steering commands,
+        // and a DistanceAngleTestStep to determine when we're done (here, close enough in angle error).
+        CountedDistanceAngleTestStep angleTermStep = new AngleTerminationStep(10.0f, 3);
+        mGuideStep  = new GoToBlockGuideStep(this, mVLib, motorGuideStep1, angleTermStep);
+        // make and add the Step that combines all of the above to turn toward the orange block
+        mSequence.add(new AutoLib.GuidedTerminatedDriveStep(this, motorGuideStep1, angleTermStep, mMotors));
+
+        // move toward the target under continuing image-based guidance, stopping when we're "close"
+        AutoLib.ErrorGuideStep motorGuideStep2 = new AutoLib.ErrorGuideStep(this, pid, null, 0.25f);
+        motorGuideStep2.setMaxPower(0.25f);
+        // make a step that analyzes a camera image from Vuforia and steers toward the biggest orange blob, presumably the block.
+        // it uses a ErrorGuideStep to process the heading error it computes into motor steering commands,
+        // and a DistanceAngleTestStep to determine when we're done (here, close enough in distance).
+        CountedDistanceAngleTestStep distanceTermStep = new DistanceTerminationStep(6.0f, 2);
+        mGuideStep  = new GoToBlockGuideStep(this, mVLib, motorGuideStep2, distanceTermStep);
+        // make and add the Step that combines all of the above to turn toward the orange block
+        mSequence.add(new AutoLib.GuidedTerminatedDriveStep(this, motorGuideStep2, distanceTermStep, mMotors));
+
+        // continue on unguided for 1 sec to push the block and then stop all motors
+        // this should be replaced by a step that terminates on something like a touch sensor hit ... TBD
+        mSequence.add(new AutoLib.MoveByTimeStep(mMotors, 0.25f, 1,true));
     }
 
     @Override public void start()

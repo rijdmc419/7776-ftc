@@ -7,8 +7,8 @@ import com.qualcomm.robotcore.hardware.DcMotor;
 import org.firstinspires.ftc.teamcode._Libs.AutoLib;
 import org.firstinspires.ftc.teamcode._Libs.hardware.RoverRuckusHardware;
 
-@Autonomous(name = "AutoMain")
-public class RoverRuckusAuto extends OpMode{
+@Autonomous(name = "CraterAutoMain")
+public class RoverRuckusAutoCrater extends OpMode{
     RoverRuckusHardware robot =  new RoverRuckusHardware();
     private AutoLib.Sequence mSeq = new AutoLib.LinearSequence();
 
@@ -17,9 +17,8 @@ public class RoverRuckusAuto extends OpMode{
         robot.lift.setPower(-.5);
         robot.lift2.setPower(-.5);
 
-        mSeq.add(new AutoLib.MoveByEncoderStep(robot.lift, robot.lift2, 1f, 575, true));
+        mSeq.add(new AutoLib.MoveByEncoderStep(robot.lift, robot.lift2, 1f, 500, true));
         mSeq.add(new AutoLib.MoveByEncoderStep(robot.fr, robot.br, robot.fl, robot.bl, 1.0f, 4250, true));
-        //mSeq.add(new AutoLib.TurnByEncoderStep(robot.fr, robot.fl, 1.0f, -1.0f, 2000, -2000, true));
     }
 
     @Override

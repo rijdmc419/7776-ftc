@@ -377,6 +377,8 @@ public class AutoLib {
             mPower = power;
         }
 
+        public void setPosition(int position) { mEncoderCount = position; }
+
         public boolean loop() {
             super.loop();
 
@@ -1166,19 +1168,33 @@ public class AutoLib {
 
     // a Sequence that turns an up-to-four-motor robot by applying the given right and left powers for given right and left encoder counts
     static public class TurnByEncoderStep extends ConcurrentSequence {
-
+        EncoderMotorStep steps[];
         public TurnByEncoderStep(DcMotor fr, DcMotor br, DcMotor fl, DcMotor bl, double rightPower, double leftPower, int rightCount, int leftCount, boolean stop)
         {
+            steps = new EncoderMotorStep[4];
             if (fr != null)
-                this.add(new EncoderMotorStep(fr, rightPower, rightCount, stop));
+                this.add(steps[0] = new EncoderMotorStep(fr, rightPower, rightCount, stop));
             if (br != null)
-                this.add(new EncoderMotorStep(br, rightPower, rightCount, stop));
+                this.add(steps[1] = new EncoderMotorStep(br, rightPower, rightCount, stop));
             if (fl != null)
-                this.add(new EncoderMotorStep(fl, leftPower, leftCount, stop));
+                this.add(steps[2] = new EncoderMotorStep(fl, leftPower, leftCount, stop));
             if (bl != null)
-                this.add(new EncoderMotorStep(bl, leftPower, leftCount, stop));
+                this.add(steps[3] = new EncoderMotorStep(bl, leftPower, leftCount, stop));
         }
 
+        public void set(double rightPower, double leftPower, int rightCount, int leftCount) {
+            steps[0].setPower(rightPower);
+            steps[0].setPosition(rightCount);
+
+            steps[1].setPower(rightPower);
+            steps[1].setPosition(rightCount);
+
+            steps[2].setPower(leftPower);
+            steps[2].setPosition(leftCount);
+
+            steps[3].setPower(leftPower);
+            steps[3].setPosition(leftCount);
+        }
     }
 
 

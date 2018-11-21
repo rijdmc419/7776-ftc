@@ -3,6 +3,7 @@ package org.firstinspires.ftc.teamcode._Libs.hardware;
 import com.qualcomm.robotcore.hardware.DcMotor;
 import com.qualcomm.robotcore.hardware.DcMotorSimple;
 import com.qualcomm.robotcore.hardware.HardwareMap;
+import com.qualcomm.robotcore.hardware.Servo;
 
 /**
  * Created by bremm on 10/26/18.
@@ -16,6 +17,8 @@ public class RoverRuckusHardware {
     public DcMotor lift = null;
     public DcMotor lift2 = null;
 
+    public Servo markerServo;
+
     HardwareMap hwMap = null;
 
     public void init (HardwareMap ahwMap) {
@@ -28,6 +31,8 @@ public class RoverRuckusHardware {
 
         lift = hwMap.get(DcMotor.class, "lift");
         lift2 = hwMap.get(DcMotor.class, "lift2");
+
+        markerServo = hwMap.get(Servo.class, "markerServo");
 
         fl.setDirection(DcMotor.Direction.REVERSE);
         bl.setDirection(DcMotor.Direction.REVERSE);
@@ -57,5 +62,7 @@ public class RoverRuckusHardware {
         br.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
         lift.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
         lift2.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
+
+        markerServo.setPosition(1);
     }
 }

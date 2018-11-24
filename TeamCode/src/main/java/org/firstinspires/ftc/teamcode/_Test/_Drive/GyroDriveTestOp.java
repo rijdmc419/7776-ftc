@@ -31,8 +31,8 @@ public class GyroDriveTestOp extends OpMode {
     SensorLib.PID mPid;                     // PID controller for the sequence
 
     // parameters of the PID controller for this sequence - assumes 20-gear motors (fast)
-    float Kp = 0.01f;        // motor power proportional term correction per degree of deviation
-    float Ki = 0.01f;         // ... integrator term
+    float Kp = 0.02f;        // motor power proportional term correction per degree of deviation
+    float Ki = 0.05f;         // ... integrator term
     float Kd = 0;             // ... derivative term
     float KiCutoff = 5.0f;    // maximum angle error for which we update integrator
 
@@ -68,7 +68,7 @@ public class GyroDriveTestOp extends OpMode {
 
         // create an autonomous sequence with the steps to drive
         // several legs of a polygonal course ---
-        float power = 0.25f;
+        float power = 0.4f;
 
         // create the root Sequence for this autonomous OpMode
         mSequence = new AutoLib.LinearSequence();
@@ -84,24 +84,26 @@ public class GyroDriveTestOp extends OpMode {
             mSequence.add(new AutoLib.AzimuthCountedDriveStep(this, 0, mGyro, mPid, mMotors, power, leg, true));
                     }
         else  {
-            float leg = debug ? 6.0f : 1.5f;  // time along each leg of the polygon
             // add a bunch of timed "legs" to the sequence - use Gyro heading convention of positive degrees CW from initial heading
             // turn 4 quadrants in place
-            mSequence.add(new AutoLib.AzimuthTimedTurnStep(this, 90, mGyro, mPid, mMotors, power, leg, false));
-            mSequence.add(new AutoLib.AzimuthTimedTurnStep(this, 180, mGyro, mPid, mMotors, power, leg, false));
-            mSequence.add(new AutoLib.AzimuthTimedTurnStep(this, 270, mGyro, mPid, mMotors, power, leg, false));
-            mSequence.add(new AutoLib.AzimuthTimedTurnStep(this, 0, mGyro, mPid, mMotors, power, leg, true));
+            float tol = 3.0f;   // tolerance of 3 degrees
+            mSequence.add(new AutoLib.AzimuthTolerancedTurnStep(this, 90, mGyro, mPid, mMotors, power, tol));
+            mSequence.add(new AutoLib.AzimuthTolerancedTurnStep(this, 180, mGyro, mPid, mMotors, power, tol));
+            mSequence.add(new AutoLib.AzimuthTolerancedTurnStep(this, 270, mGyro, mPid, mMotors, power, tol));
+            mSequence.add(new AutoLib.AzimuthTolerancedTurnStep(this, 0, mGyro, mPid, mMotors, power, tol));
             // drive a "box" CCW and then again CW - see if we end up where we started ...
+            float leg = debug ? 6.0f : 1.5f;  // time along each leg of the polygon
             mSequence.add(new AutoLib.AzimuthTimedDriveStep(this, 0, mGyro, mPid, mMotors, power, leg, false));
             mSequence.add(new AutoLib.AzimuthTimedDriveStep(this, 90, mGyro, mPid, mMotors, power, leg, false));
             mSequence.add(new AutoLib.AzimuthTimedDriveStep(this, 180, mGyro, mPid, mMotors, power, leg, false));
             mSequence.add(new AutoLib.AzimuthTimedDriveStep(this, -90, mGyro, mPid, mMotors, power, leg, false));
-            mSequence.add(new AutoLib.AzimuthTimedTurnStep(this, 0, mGyro, mPid, mMotors, power, leg, true));
+            mSequence.add(new AutoLib.AzimuthTolerancedTurnStep(this, 0, mGyro, mPid, mMotors, power, tol));
             mSequence.add(new AutoLib.AzimuthTimedDriveStep(this, 90, mGyro, mPid, mMotors, power, leg, false));
             mSequence.add(new AutoLib.AzimuthTimedDriveStep(this, 0, mGyro, mPid, mMotors, power, leg, false));
             mSequence.add(new AutoLib.AzimuthTimedDriveStep(this, -90, mGyro, mPid, mMotors, power, leg, false));
             mSequence.add(new AutoLib.AzimuthTimedDriveStep(this, 180, mGyro, mPid, mMotors, power, leg, false));
-            mSequence.add(new AutoLib.AzimuthTimedTurnStep(this, 0, mGyro, mPid, mMotors, power, leg, true));
+            mSequence.add(new AutoLib.AzimuthTolerancedTurnStep(this, 0, mGyro, mPid, mMotors, power, tol));
+            mSequence.add(new AutoLib.MoveByTimeStep(mMotors, 0, 0, true));     // stop all motors
         }
 
         // start out not-done

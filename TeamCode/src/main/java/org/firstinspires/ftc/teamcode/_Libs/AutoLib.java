@@ -546,7 +546,7 @@ public class AutoLib {
             }
             mMotorSteps = motorsteps;
             mPower = power;
-            mMaxPower = 1.0f;
+            mMaxPower = power;
         }
 
         // set max allowed power including direction correction ---
@@ -651,7 +651,7 @@ public class AutoLib {
             }
             mMotorSteps = motorsteps;
             mPower = power;
-            mMaxPower = 1.0f;
+            mMaxPower = power;
         }
 
         // set max allowed power including direction correction ---
@@ -796,7 +796,7 @@ public class AutoLib {
 
         public GyroTestHeadingStep(HeadingSensor sensor, double heading, double tol){
             mSensor = sensor;
-            mHeading = heading;
+            mHeading = SensorLib.Utils.wrapAngle(heading);
             mTolerance = tol;
         }
 
@@ -804,7 +804,7 @@ public class AutoLib {
             super.loop();
 
             if (mSensor.haveHeading())
-                return (Math.abs(mSensor.getHeading()-mHeading) < mTolerance);
+                return (Math.abs(SensorLib.Utils.wrapAngle(mSensor.getHeading())-mHeading) < mTolerance);
             else
                 return false;
         }
@@ -915,7 +915,7 @@ public class AutoLib {
                 mPid = new SensorLib.PID(Kp, Ki, Kd, KiCutoff);
             }
             mMotorSteps = motorsteps;
-            mMaxPower = 1.0f;
+            mMaxPower = power;
         }
 
         // set max allowed power including direction correction ---
@@ -1131,10 +1131,53 @@ public class AutoLib {
     static public class AzimuthTimedTurnStep extends AzimuthTimedDriveStep {
 
         public AzimuthTimedTurnStep(OpMode mode, float heading, HeadingSensor gyro, SensorLib.PID pid,
-                                     DcMotor motors[], float power, float time, boolean stop)
+                                    DcMotor motors[], float power, float time, boolean stop)
         {
             super(mode, heading, gyro, pid, motors, 0, power, time, stop);
         }
+
+    }
+
+
+    // a Step that turns in place - just shorthand for a special case of its base class.
+    // turn in place to given heading using given gyro sensor, waiting for given time.
+    static public class AzimuthTolerancedTurnStep extends ConcurrentSequence implements SetDirectionHeadingPower {
+
+        public AzimuthTolerancedTurnStep(OpMode mode, float heading, HeadingSensor gyro, SensorLib.PID pid,
+                                    DcMotor motors[], float power, float tol)
+        {
+            // add a concurrent Step to control each motor
+            ArrayList<SetPower> steps = new ArrayList<SetPower>();
+            for (DcMotor em : motors)
+                if (em != null) {
+                    TimedMotorStep step = new TimedMotorStep(em, power, 0, false);
+                    this.add(step);
+                    steps.add(step);
+                }
+
+            // add a concurrent Step to control the motor steps based on DistanceSensor input
+            // put it 2nd in the list so it can set the power of the motors to zero BEFORE their steps run
+            this.preAdd(new GyroTestHeadingStep(gyro, heading, tol));
+
+            // add a concurrent Step to control the motor steps based on gyro input
+            // put it at the front of the list so it can update the motors BEFORE their steps run
+            // and BEFORE the DistanceSensorGuideStep might try to turn the motors off.
+            this.preAdd(new GyroGuideStep(mode, heading, gyro, pid, steps, 0));
+
+            // to turn in place, we set the power to zero (above) and the max power of the GyroGuideStep to the given power
+            setMaxPower(power);
+        }
+
+        // the base class loop function does all we need -- it will return "done" when
+        // all the motors are done.
+
+        // update target direction, heading, and power --
+        // used e.g. by interactive teleop modes to redirect the step from controller input
+        public void setDirection(float direction) { ((GyroGuideStep)mSteps.get(0)).setDirection(direction); }
+        public void setRelativeDirection(float direction) { ((GyroGuideStep)mSteps.get(0)).setRelativeDirection(direction); }
+        public void setHeading(float heading) { ((GyroGuideStep)mSteps.get(0)).setHeading(heading); }
+        public void setPower(float power) { ((GyroGuideStep)mSteps.get(0)).setPower(power); }
+        public void setMaxPower(float power) { ((GyroGuideStep)mSteps.get(0)).setMaxPower(power); }
 
     }
 

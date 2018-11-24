@@ -796,7 +796,7 @@ public class AutoLib {
 
         public GyroTestHeadingStep(HeadingSensor sensor, double heading, double tol){
             mSensor = sensor;
-            mHeading = SensorLib.Utils.wrapAngle(heading);
+            mHeading = heading;
             mTolerance = tol;
         }
 
@@ -804,7 +804,7 @@ public class AutoLib {
             super.loop();
 
             if (mSensor.haveHeading())
-                return (Math.abs(SensorLib.Utils.wrapAngle(mSensor.getHeading())-mHeading) < mTolerance);
+                return (Math.abs(SensorLib.Utils.wrapAngle(mSensor.getHeading()-mHeading)) < mTolerance);
             else
                 return false;
         }

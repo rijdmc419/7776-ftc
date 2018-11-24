@@ -404,6 +404,7 @@ public class VuforiaLib_RoverRuckus implements HeadingSensor, LocationSensor {
     {
         return (lastLocation != null);
     }
+    public void setHeadingOffset(float offset) {}   // not used; Vuforia headings are field-absolute
 
     // implements LocationSensor interface
     public VectorF getLocation() { return getFieldPosition(); }

@@ -1,26 +1,27 @@
 package org.firstinspires.ftc.teamcode._Libs;
 
 import com.qualcomm.hardware.bosch.BNO055IMU;
-import com.qualcomm.robotcore.eventloop.opmode.OpMode;
-
 import org.firstinspires.ftc.robotcore.external.navigation.Orientation;
 import org.firstinspires.ftc.robotcore.external.navigation.Position;
-
 import static android.os.SystemClock.sleep;
 
 // wrapper for BNO055IMU gyro that implements our HeadingSensor interface
 public class BNO055IMUHeadingSensor implements HeadingSensor {
     BNO055IMU mIMU;
+    float mHeadingOffset = 0;
 
     public BNO055IMUHeadingSensor(BNO055IMU imu) {
         mIMU = imu;
     }
 
     public float getHeading() {
-        return mIMU.getAngularOrientation().firstAngle;
+        // return sensor heading value plus initial offset (heading at sensor zero) wrapped to -180..+180
+        return SensorLib.Utils.wrapAngle(mIMU.getAngularOrientation().firstAngle + mHeadingOffset);
     }
 
     public boolean haveHeading() { return true; }
+
+    public void setHeadingOffset(float offset) { mHeadingOffset = offset; }
 
     public float getPitch() {
         return mIMU.getAngularOrientation().thirdAngle;

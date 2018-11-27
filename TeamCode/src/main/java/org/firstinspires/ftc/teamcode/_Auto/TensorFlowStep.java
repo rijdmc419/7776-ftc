@@ -56,7 +56,7 @@ public class TensorFlowStep extends AutoLib.Step {
         mTurnStep = turnStep;
         mReturnStep = returnStep;
         mRobot = robot;
-        mTimer = new AutoLib.Timer(1);
+        mTimer = new AutoLib.Timer(2);
 
         initVuforia();
 
@@ -112,17 +112,18 @@ public class TensorFlowStep extends AutoLib.Step {
         }
 
         if(mTimer.done()) {
+            mOpMode.telemetry.addData("Gold Position Number", mGoldPosition);
             if(mGoldPosition == 0) {
                 mTurnStep.set(1.0, -1.0, 1000, -1000);
-                mTurnStep.set(-1.0, 1.0, -1000, 1000);
+                mReturnStep.set(-1.0, 1.0, -1000, 1000);
             }
             if(mGoldPosition == 1) {
                 mTurnStep.set(0.0, 0.0, 1000, -1000);
-                mTurnStep.set(0.0, 0.0, 1000, -1000);
+                mReturnStep.set(0.0, 0.0, 1000, -1000);
             }
             if(mGoldPosition == 2) {
                 mTurnStep.set(-1.0, 1.0, -1000, 1000);
-                mTurnStep.set(1.0, -1.0, 1000, -1000);
+                mReturnStep.set(1.0, -1.0, 1000, -1000);
             }
 
             if (tfod != null) {

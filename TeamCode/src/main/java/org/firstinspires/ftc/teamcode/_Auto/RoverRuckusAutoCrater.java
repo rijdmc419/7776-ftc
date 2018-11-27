@@ -16,7 +16,7 @@ public class RoverRuckusAutoCrater extends OpMode{
         robot.init(hardwareMap);
         robot.lift.setPower(-.5);
         robot.lift2.setPower(-.5);
-
+        
         mSeq.add(new AutoLib.MoveByEncoderStep(robot.lift, robot.lift2, 1f, 500, true));
         mSeq.add(new AutoLib.MoveByEncoderStep(robot.fr, robot.br, robot.fl, robot.bl, 1.0f, 4250, true));
     }

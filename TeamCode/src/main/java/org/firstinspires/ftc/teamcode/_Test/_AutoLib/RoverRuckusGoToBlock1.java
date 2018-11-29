@@ -80,7 +80,7 @@ class GoToBlockGuideStep extends AutoLib.MotorGuideStep implements SetPosterizer
     final boolean mCameraOnRight = false;     // e.g. orientation of phone on robot (assumed landscape) is with camera on the left
     final float mCameraOffset = -0.5f;        // e.g. camera lens is 0.5 x bin width to the left of the center of the cryptobox column on the block's left side
 
-    final int minDoneCount = 5;         // require "done" test to succeed this many consecutive times
+    final int minDoneCount = 2;         // require "done" test to succeed this many consecutive times
     int mDoneCount;
 
     SetBitmap mSBM;                     // interface through which we tell the controlling opMode about our Bitmap so it can display it
@@ -209,9 +209,8 @@ class GoToBlockGuideStep extends AutoLib.MotorGuideStep implements SetPosterizer
                 }
             }
 
-            // when we're more or less pointing at the block ...
-            if (angError != 0) {             // have valid direction data ...
-                if (Math.abs(angError) < 3.0f) {       // for now, complete this step when we're more or less pointed at block
+            if (distance != -1) {             // have valid distance data ...
+                if (distance < 6.0f) {       // for now, complete this step when we're close
                     // require completion test to pass some min number of times in a row to believe it
                     mDoneCount++;
                     if (mDoneCount >= minDoneCount) {
@@ -303,6 +302,7 @@ public class RoverRuckusGoToBlock1 extends OpMode implements SetBitmap {
         if (invertLeft) {
             mMotors[2].setDirection(DcMotor.Direction.REVERSE);
             mMotors[3].setDirection(DcMotor.Direction.REVERSE);
+            mMotors[1].setDirection(DcMotor.Direction.REVERSE);         // HACK!!! ratbot back-right motor is reversed ????
         }
         else {
             mMotors[0].setDirection(DcMotor.Direction.REVERSE);
@@ -331,8 +331,8 @@ public class RoverRuckusGoToBlock1 extends OpMode implements SetBitmap {
         mGuideStep  = new GoToBlockGuideStep(this, this, mVLib, motorGuideStep);
         // make and add the Step that combines all of the above to go to the orange block
         mSequence.add(new AutoLib.GuidedTerminatedDriveStep(this, mGuideStep, motorGuideStep, mMotors));
-        // continue on unguided for 1 sec and then stop all motors
-        mSequence.add(new AutoLib.MoveByTimeStep(mMotors, power, 2, true));
+        // stop all motors
+        mSequence.add(new AutoLib.MoveByTimeStep(mMotors, power, 0, true));
 
         mView = (ImageView)((Activity)hardwareMap.appContext).findViewById(com.qualcomm.ftcrobotcontroller.R.id.OpenCVOverlay);
         mView.post(new Runnable() {

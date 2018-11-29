@@ -626,9 +626,10 @@ public class AutoLib {
     // assumes an even number of concurrent drive motor steps in order right ..., left ...
     // this step tries to steer the robot by adjusting the left vs. right motors to change the robot's heading in response
     // to error inputs from some other sensor-based step. These are set through calls to any of setDirection, setRelativeDirection, or setHeading.
+    // deviations to left are positive, to right are negative (right handed Yaw axis)
     static public class ErrorGuideStep extends MotorGuideStep implements SetDirectionHeadingPower {
         private float mPower;                               // basic power setting of all 4 motors -- adjusted for steering along path
-        private float mDirection;                           // absolute direction along which the robot should move (0 ahead; positive CCW)
+        private float mDirection;                           // current deviation from direction along which the robot should move (0 on course; positive CCW)
         private OpMode mOpMode;                             // needed so we can log output (may be null)
         private SensorLib.PID mPid;                         // proportional–integral–derivative controller (PID controller)
         private double mPrevTime;                           // time of previous loop() call
@@ -685,7 +686,6 @@ public class AutoLib {
             }
 
             float error = mDirection;   // deviation from desired heading
-            // deviations to left are positive, to right are negative
 
             // compute delta time since last call -- used for integration time of PID step
             double time = mOpMode.getRuntime();
@@ -693,11 +693,11 @@ public class AutoLib {
             mPrevTime = time;
 
             // feed error through PID to get motor power correction value
-            float correction = -mPid.loop(error, (float)dt);
+            float correction = mPid.loop(error, (float)dt);
 
             // compute new right/left motor powers
-            float rightPower = mPower + correction;
-            float leftPower = mPower - correction;
+            float rightPower = mPower - correction;
+            float leftPower = mPower + correction;
 
             // normalize so neither has magnitude > maxPower
             float norm = normalize(mMaxPower, rightPower, leftPower);

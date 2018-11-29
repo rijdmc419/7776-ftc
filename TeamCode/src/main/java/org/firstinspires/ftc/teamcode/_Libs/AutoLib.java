@@ -788,23 +788,42 @@ public class AutoLib {
         }
     }
 
-    // a Step that returns true iff the given HeadingSensor reports a heading within some tolerance of a desired heading.
-    static public class GyroTestHeadingStep extends Step {
-        private HeadingSensor mSensor;
-        private double mHeading;
-        private double mTolerance;
 
-        public GyroTestHeadingStep(HeadingSensor sensor, double heading, double tol){
+    // a Step that returns true when the given HeadingSensor settles at a heading within some tolerance of a desired heading.
+    static public class GyroTestHeadingStep extends Step {
+        HeadingSensor mSensor;
+        double mHeading;
+        double mTolerance;
+        int mInTolCount, mReqTolCount;
+        Timer mTimer;       // Timer for this Step
+
+        public GyroTestHeadingStep(HeadingSensor sensor, double heading, double tol, int count, float timeout){
             mSensor = sensor;
             mHeading = heading;
             mTolerance = tol;
+            mReqTolCount = count;
+            mInTolCount = 0;
+            mTimer = new Timer(timeout);
         }
 
         public boolean loop() {
             super.loop();
 
-            if (mSensor.haveHeading())
-                return (Math.abs(SensorLib.Utils.wrapAngle(mSensor.getHeading()-mHeading)) < mTolerance);
+            // start the Timer on our first call
+            if (firstLoopCall())
+                mTimer.start();
+
+            // can't do this forever -- time out if timer expires
+            if (mTimer.done())        // appears to cycle here at about 3ms/loop
+                return true;            // we're done whether or not we were ever within tolerance
+
+            if (mSensor.haveHeading()) {
+                if (Math.abs(SensorLib.Utils.wrapAngle(mSensor.getHeading() - mHeading)) < mTolerance)
+                    mInTolCount++;
+                else
+                    mInTolCount = 0;    // reset
+                return (mInTolCount >= mReqTolCount);
+            }
             else
                 return false;
         }
@@ -1138,13 +1157,12 @@ public class AutoLib {
 
     }
 
-
-    // a Step that turns in place - just shorthand for a special case of its base class.
+    // a Step that turns in place -
     // turn in place to given heading using given gyro sensor, waiting for given time.
     static public class AzimuthTolerancedTurnStep extends ConcurrentSequence implements SetDirectionHeadingPower {
 
         public AzimuthTolerancedTurnStep(OpMode mode, float heading, HeadingSensor gyro, SensorLib.PID pid,
-                                    DcMotor motors[], float power, float tol)
+                                    DcMotor motors[], float power, float tol, float timeout)
         {
             // add a concurrent Step to control each motor
             ArrayList<SetPower> steps = new ArrayList<SetPower>();
@@ -1155,13 +1173,11 @@ public class AutoLib {
                     steps.add(step);
                 }
 
-            // add a concurrent Step to control the motor steps based on DistanceSensor input
-            // put it 2nd in the list so it can set the power of the motors to zero BEFORE their steps run
-            this.preAdd(new GyroTestHeadingStep(gyro, heading, tol));
+            // add a concurrent Step to determine when we're done (close enough).
+            this.preAdd(new GyroTestHeadingStep(gyro, heading, tol, 10, timeout));
 
             // add a concurrent Step to control the motor steps based on gyro input
             // put it at the front of the list so it can update the motors BEFORE their steps run
-            // and BEFORE the DistanceSensorGuideStep might try to turn the motors off.
             this.preAdd(new GyroGuideStep(mode, heading, gyro, pid, steps, 0));
 
             // to turn in place, we set the power to zero (above) and the max power of the GyroGuideStep to the given power

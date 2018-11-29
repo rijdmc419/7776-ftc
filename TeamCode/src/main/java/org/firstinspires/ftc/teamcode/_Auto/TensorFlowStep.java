@@ -48,13 +48,18 @@ public class TensorFlowStep extends AutoLib.Step {
     AutoLib.Timer mTimer;
     AutoLib.TurnByEncoderStep mTurnStep;
     AutoLib.TurnByEncoderStep mReturnStep;
+    AutoLib.TurnByEncoderStep mTurnToCraterStep;
+    AutoLib.TurnByEncoderStep mDriveAfterTurn;
     RoverRuckusHardware mRobot;
     int mGoldPosition;
 
-    public TensorFlowStep(OpMode opMode, AutoLib.TurnByEncoderStep turnStep, RoverRuckusHardware robot, AutoLib.TurnByEncoderStep returnStep) {
+    public TensorFlowStep(OpMode opMode, AutoLib.TurnByEncoderStep turnStep, RoverRuckusHardware robot, AutoLib.TurnByEncoderStep returnStep, AutoLib.TurnByEncoderStep turnToCraterStep, AutoLib.TurnByEncoderStep driveAfterTurn) {
         mOpMode = opMode;
         mTurnStep = turnStep;
         mReturnStep = returnStep;
+        mDriveAfterTurn = driveAfterTurn;
+        mTurnToCraterStep = turnToCraterStep;
+        mDriveAfterTurn = driveAfterTurn;
         mRobot = robot;
         mTimer = new AutoLib.Timer(2);
 
@@ -114,16 +119,22 @@ public class TensorFlowStep extends AutoLib.Step {
         if(mTimer.done()) {
             mOpMode.telemetry.addData("Gold Position Number", mGoldPosition);
             if(mGoldPosition == 0) {
-                mTurnStep.set(1.0, -1.0, 1000, -1000);
-                mReturnStep.set(-1.0, 1.0, -1000, 1000);
+                mTurnStep.set(1.0, -1.0, 500, -500);
+                mReturnStep.set(-1.0, 1.0, -850, 850);
+                mDriveAfterTurn.set(1.0, 1.0, 3000, 3000);
+                mTurnToCraterStep.set(1.0f, -1.0f, 1000, -1000);
             }
             if(mGoldPosition == 1) {
-                mTurnStep.set(0.0, 0.0, 1000, -1000);
-                mReturnStep.set(0.0, 0.0, 1000, -1000);
+                mTurnStep.set(0.0, 0.0, 0, 0);
+                mReturnStep.set(0.0, 0.0, 0, 0);
+                mDriveAfterTurn.set(1.0, 1.0, 2500, 2500);
+                mTurnToCraterStep.set(1.0f, -1.0f, 1000, -1000);
             }
             if(mGoldPosition == 2) {
-                mTurnStep.set(-1.0, 1.0, -1000, 1000);
-                mReturnStep.set(1.0, -1.0, 1000, -1000);
+                mTurnStep.set(-1.0, 1.0, -500, 500);
+                mDriveAfterTurn.set(1.0, 1.0, 3000, 3000);
+                mReturnStep.set(1.0, -1.0, 850, -850);
+                mTurnToCraterStep.set(1.0f, -1.0f, 1000, -1000);
             }
 
             if (tfod != null) {

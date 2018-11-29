@@ -13,11 +13,13 @@ public class TensorFlowOpMode extends OpMode{
     private AutoLib.Sequence mSeq = new AutoLib.LinearSequence();
     private AutoLib.TurnByEncoderStep turnStep;
     private AutoLib.TurnByEncoderStep returnStep;
+    private AutoLib.TurnByEncoderStep turnToCraterStep;
+    private AutoLib.TurnByEncoderStep driveAfterTurn;
 
     public void init() {
         robot.init(hardwareMap);
         turnStep = new AutoLib.TurnByEncoderStep(robot.fr, robot.br, robot.fl, robot.bl, 0, 0, 0, 0, true);
-        mSeq.add(new TensorFlowStep(this, turnStep, robot, returnStep));
+        mSeq.add(new TensorFlowStep(this, turnStep, robot, returnStep, turnToCraterStep, driveAfterTurn));
         mSeq.add(turnStep);
         mSeq.add(returnStep);
     }

@@ -182,6 +182,9 @@ class GoToBlockGuideStep extends AutoLib.MotorGuideStep {
         float distance = -1;
         float angError = 0;
 
+        // previous Recognition appears to be updated even if a new one isn't delivered below (!)
+        // telemetry indicates we rarely get a new "detected", but data in existing one changes.
+
         TFObjectDetector tfod = mVLib.getTfod();
         if (tfod != null) {
             // getUpdatedRecognitions() will return null if no new information is available since
@@ -189,11 +192,11 @@ class GoToBlockGuideStep extends AutoLib.MotorGuideStep {
             List<Recognition> updatedRecognitions = tfod.getUpdatedRecognitions();
             if (updatedRecognitions != null) {
                 mOpMode.telemetry.addData("# Object Detected", updatedRecognitions.size());
-
                 if (updatedRecognitions.size() >= 1) {
                     for (Recognition recognition : updatedRecognitions) {
                         if (recognition.getLabel().equals(LABEL_GOLD_MINERAL)) {
                             mGoldMineral = recognition;
+                            mOpMode.telemetry.addData("Gold Mineral Detected", recognition);
                         }
                     }
                 }
@@ -306,18 +309,12 @@ public class RoverRuckusGoToBlockTF extends OpMode  {
 
         // create the root Sequence for this autonomous OpMode
         mSequence = new AutoLib.LinearSequence();
-        // make a step that will steer the robot given guidance from the GoToBlockGuideStep
-
-        // construct a PID controller for correcting heading errors
-        final float Kp = 0.03f;        // degree heading proportional term correction per degree of deviation
-        final float Ki = 0.005f;       // ... integrator term
-        final float Kd = 0.0f;         // ... derivative term
-        final float KiCutoff = 0.0f;   // maximum angle error for which we update integrator
-        SensorLib.PID pid = new SensorLib.PID(Kp, Ki, Kd, KiCutoff);
 
         // turn in place to face target within some error bound
-        AutoLib.ErrorGuideStep motorGuideStep1 = new AutoLib.ErrorGuideStep(this, pid, null, 0);
-        motorGuideStep1.setMaxPower(0.25f);
+        // initial error may be quite large (>20 degrees), so don't overdo correction or we'll spin
+        SensorLib.PID pid1 = new SensorLib.PID(0.01f, 0.01f, 0, 5.0f);
+        AutoLib.ErrorGuideStep motorGuideStep1 = new AutoLib.ErrorGuideStep(this, pid1, null, 0);
+        motorGuideStep1.setMaxPower(0.2f);
         // make a step that analyzes a camera image from Vuforia and steers toward the biggest orange blob, presumably the block.
         // it uses a ErrorGuideStep to process the heading error it computes into motor steering commands,
         // and a DistanceAngleTestStep to determine when we're done (here, close enough in angle error).
@@ -327,7 +324,9 @@ public class RoverRuckusGoToBlockTF extends OpMode  {
         mSequence.add(new AutoLib.GuidedTerminatedDriveStep(this, guideStep1, angleTermStep, mMotors));
 
         // move toward the target under continuing image-based guidance, stopping when we're "close"
-        AutoLib.ErrorGuideStep motorGuideStep2 = new AutoLib.ErrorGuideStep(this, pid, null, 0.25f);
+        // should be pointing pretty much at the target, so a bit more agressive steering should be okay here
+        SensorLib.PID pid2 = new SensorLib.PID(0.005f, 0.001f, 0, 5.0f);
+        AutoLib.ErrorGuideStep motorGuideStep2 = new AutoLib.ErrorGuideStep(this, pid2, null, 0.25f);
         motorGuideStep2.setMaxPower(0.25f);
         // make a step that analyzes a camera image from Vuforia and steers toward the biggest orange blob, presumably the block.
         // it uses a ErrorGuideStep to process the heading error it computes into motor steering commands,

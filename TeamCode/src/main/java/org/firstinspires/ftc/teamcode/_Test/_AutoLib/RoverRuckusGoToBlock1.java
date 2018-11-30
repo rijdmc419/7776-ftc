@@ -302,7 +302,7 @@ public class RoverRuckusGoToBlock1 extends OpMode implements SetBitmap {
         if (invertLeft) {
             mMotors[2].setDirection(DcMotor.Direction.REVERSE);
             mMotors[3].setDirection(DcMotor.Direction.REVERSE);
-            mMotors[1].setDirection(DcMotor.Direction.REVERSE);         // HACK!!! ratbot back-right motor is reversed ????
+            //mMotors[1].setDirection(DcMotor.Direction.REVERSE);         // HACK!!! ratbot back-right motor is reversed ????
         }
         else {
             mMotors[0].setDirection(DcMotor.Direction.REVERSE);
@@ -318,7 +318,7 @@ public class RoverRuckusGoToBlock1 extends OpMode implements SetBitmap {
         // make a step that will steer the robot given guidance from the GoToBlockGuideStep
 
         // construct a PID controller for correcting heading errors
-        final float Kp = 0.005f;        // degree heading proportional term correction per degree of deviation
+        final float Kp = 0.01f;        // degree heading proportional term correction per degree of deviation
         final float Ki = 0.005f;        // ... integrator term
         final float Kd = 0.0f;         // ... derivative term
         final float KiCutoff = 0.0f;   // maximum angle error for which we update integrator

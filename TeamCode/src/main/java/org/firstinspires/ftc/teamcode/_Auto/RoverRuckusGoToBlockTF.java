@@ -42,12 +42,14 @@ import android.graphics.Point;
 import android.graphics.RectF;
 import android.widget.ImageView;
 
+import com.qualcomm.hardware.bosch.BNO055IMU;
 import com.qualcomm.robotcore.eventloop.opmode.Autonomous;
 import com.qualcomm.robotcore.eventloop.opmode.OpMode;
 import com.qualcomm.robotcore.hardware.DcMotor;
 
 import org.firstinspires.ftc.robotcore.external.navigation.AngleUnit;
 import org.firstinspires.ftc.teamcode._Libs.AutoLib;
+import org.firstinspires.ftc.teamcode._Libs.BNO055IMUHeadingSensor;
 import org.firstinspires.ftc.teamcode._Libs.BlobFinder;
 import org.firstinspires.ftc.teamcode._Libs.RS_Posterize;
 import org.firstinspires.ftc.teamcode._Libs.SensorLib;
@@ -150,9 +152,68 @@ class DistanceTerminationStep extends CountedDistanceAngleTestStep {
     }
 }
 
-// this is a guide step that uses camera image data to
-// guide the robot to the indicated bin of the cryptobox
-//
+// this guide step  uses Vuforia TensorFlow to detect the yellow block and
+// tell a gyro-based Turn Step how far to turn.
+// this avoids the problem of the camera losing track of the target as we turn.
+class BearingToBlockGuideStep extends AutoLib.Step {
+
+    VuforiaLib_RoverRuckus mVLib;
+    OpMode mOpMode;
+    AutoLib.SetDirectionHeadingPower mTurnStep;
+
+    private static final String LABEL_GOLD_MINERAL = "Gold Mineral";
+
+    BearingToBlockGuideStep(OpMode opMode, VuforiaLib_RoverRuckus VLib, AutoLib.SetDirectionHeadingPower turnStep) {
+        mOpMode = opMode;
+        mVLib = VLib;
+        mTurnStep = turnStep;
+    }
+
+    public boolean loop() {
+        super.loop();
+        mOpMode.telemetry.addData("BearingToBlockGuideStep", "");
+
+        Recognition goldMineral = null;
+        TFObjectDetector tfod = mVLib.getTfod();
+        if (tfod != null) {
+            // getUpdatedRecognitions() will return null if no new information is available since
+            // the last time that call was made.
+            List<Recognition> updatedRecognitions = tfod.getUpdatedRecognitions();
+            if (updatedRecognitions != null) {
+                mOpMode.telemetry.addData("# Object Detected", updatedRecognitions.size());
+                if (updatedRecognitions.size() >= 1) {
+                    for (Recognition recognition : updatedRecognitions) {
+                        if (recognition.getLabel().equals(LABEL_GOLD_MINERAL)) {
+                            goldMineral = recognition;
+                            mOpMode.telemetry.addData("Gold Mineral Detected", recognition);
+                        }
+                    }
+                }
+            }
+        }
+
+        // if we have data ...
+        if (goldMineral != null) {
+
+            // get TF's estimate of angle error - positive (CCW) means we're pointing to the left of where we should be
+            float angError = (float)(goldMineral.estimateAngleToObject(AngleUnit.DEGREES));
+            mOpMode.telemetry.addData("TF angle err", angError);
+
+            // tell the turn step the bearing to turn to so we face the block.
+            // assuming gyro considers initial heading zero, we want to point at the block at heading -angError
+            if (mTurnStep != null) {
+                mTurnStep.setHeading(-angError);
+            }
+
+            return true;    // done ... next step (presumably a Turn) can now run
+        }
+
+        return false;  // haven't gotten data yet ...
+    }
+
+}
+
+// this step actively steers a MotorGuideStep to the block detected by Vuforia TensorFlow
 class GoToBlockGuideStep extends AutoLib.MotorGuideStep {
 
     VuforiaLib_RoverRuckus mVLib;
@@ -178,6 +239,8 @@ class GoToBlockGuideStep extends AutoLib.MotorGuideStep {
 
     public boolean loop() {
         super.loop();
+
+        mOpMode.telemetry.addData("GoToBlockGuideStep", "");
 
         float distance = -1;
         float angError = 0;
@@ -263,6 +326,7 @@ public class RoverRuckusGoToBlockTF extends OpMode  {
     VuforiaLib_RoverRuckus mVLib;           // Vuforia wrapper object used by Steps
     Point mBmSize;                          // size of the image Vuforia would return as a bitmap
     double mTime;   // time of last loop() call -- used to compute frames per second
+    BNO055IMUHeadingSensor mGyro;           // gyro to use for heading information
 
 
     boolean getHardware(AutoLib.HardwareFactory mf, DcMotor[] motors) {
@@ -303,6 +367,11 @@ public class RoverRuckusGoToBlockTF extends OpMode  {
             mMotors[1].setDirection(DcMotor.Direction.REVERSE);
         }
 
+        // get hardware IMU and wrap gyro in HeadingSensor object usable below
+        mGyro = new BNO055IMUHeadingSensor(hardwareMap.get(BNO055IMU.class, "imu"));
+        mGyro.init(3);  // 3: upright crosswise with REV face forward
+
+
         // best to do this now, which is called from opmode's init() function
         mVLib = new VuforiaLib_RoverRuckus();
         mVLib.init(this, null);
@@ -311,19 +380,19 @@ public class RoverRuckusGoToBlockTF extends OpMode  {
         mSequence = new AutoLib.LinearSequence();
 
         // turn in place to face target within some error bound
-        // initial error may be quite large (>20 degrees), so don't overdo correction or we'll spin
-        SensorLib.PID pid1 = new SensorLib.PID(0.01f, 0.01f, 0, 5.0f);
-        AutoLib.ErrorGuideStep motorGuideStep1 = new AutoLib.ErrorGuideStep(this, pid1, null, 0);
-        motorGuideStep1.setMaxPower(0.2f);
-        // make a step that analyzes a camera image from Vuforia and steers toward the biggest orange blob, presumably the block.
-        // it uses a ErrorGuideStep to process the heading error it computes into motor steering commands,
-        // and a DistanceAngleTestStep to determine when we're done (here, close enough in angle error).
-        CountedDistanceAngleTestStep angleTermStep = new AngleTerminationStep(10.0f, 3);
-        AutoLib.MotorGuideStep guideStep1 = new GoToBlockGuideStep(this, mVLib, motorGuideStep1, angleTermStep);
-        // make and add the Step that combines all of the above to turn toward the orange block
-        mSequence.add(new AutoLib.GuidedTerminatedDriveStep(this, guideStep1, angleTermStep, mMotors));
+        // this step actually executes the turn
+        SensorLib.PID pid1 = new SensorLib.PID(0.02f, 0.025f, 0, 10.0f);
+        AutoLib.AzimuthTolerancedTurnStep turnStep = new AutoLib.AzimuthTolerancedTurnStep(this, 0, mGyro, pid1, mMotors, 0.25f, 5.0f, 5.0f);
 
-        // move toward the target under continuing image-based guidance, stopping when we're "close"
+        // this step uses the Vuforia TensorFlow code to determine the angle to the target (yellow cube)
+        // and tells the gyro-based turn step how far to turn.
+        mSequence.add(new BearingToBlockGuideStep(this, mVLib, turnStep));
+
+        // after the Bearing step completes, we can run the Turn step
+        mSequence.add(turnStep);
+
+
+        // next, move toward the target under continuing image-based guidance, stopping when we're "close"
         // should be pointing pretty much at the target, so a bit more agressive steering should be okay here
         SensorLib.PID pid2 = new SensorLib.PID(0.005f, 0.001f, 0, 5.0f);
         AutoLib.ErrorGuideStep motorGuideStep2 = new AutoLib.ErrorGuideStep(this, pid2, null, 0.25f);

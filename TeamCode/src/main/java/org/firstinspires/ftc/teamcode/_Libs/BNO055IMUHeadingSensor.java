@@ -71,8 +71,8 @@ public class BNO055IMUHeadingSensor implements HeadingSensor {
 
     private void setRevOrientation(BNO055IMU imu, int orientation) {
         // other orientations need these settings:
-        byte[] config = { 0x24, 0x24, 0x6, 0x9, 0x21, 0x24, 0x6 };
-        byte[] sign   = { 0x0,  0x6,  0x1, 0x3, 0x4,  0x6,  0x2 };
+        byte[] config = { 0x24, 0x24, 0x6, 0x9, 0x21, 0x24, 0x6, 0x21 };
+        byte[] sign   = { 0x0,  0x6,  0x1, 0x3, 0x4,  0x6,  0x2, 0x1 };
         // 0: flat with top of REV label on right side of vehicle (default):
         // byte AXIS_MAP_CONFIG_BYTE = 0x24;    // Z=Z Y=Y X=X
         // byte AXIS_MAP_SIGN_BYTE = 0x0;       // X Y Z
@@ -94,6 +94,9 @@ public class BNO055IMUHeadingSensor implements HeadingSensor {
         // 6: upright longitudinally with V nearest the front of vehicle:
         // byte AXIS_MAP_CONFIG_BYTE = 0x6;     // Z=-X Y=Y X=Z
         // byte AXIS_MAP_SIGN_BYTE = 0x2;       // X -Y Z     ?? if 0x4 -X Y Z, X and Y are LH rotations
+        // 7: flat face DOWN with top of REV label nearest the back of vehicle:
+        // byte AXIS_MAP_CONFIG_BYTE = 0x21;    // Z=-Z Y=X X=Y
+        // byte AXIS_MAP_SIGN_BYTE = 0x1;       // X Y -Z
 
 
         //Need to be in CONFIG mode to write to registers

@@ -399,30 +399,47 @@ public class AutoLib {
 
     // a Step that drives a Servo to a given position
     // it would be nice if we got actual position info back from the servo, but that's not
-    // how it works, so we just wait long enough for it to probably get where it's told to go.
+    // how it works, so client sequences should either
+    // * tell us how long it takes for the servo travel through its full range (0..1) by using the second constructor, or
+    // * follow each ServoStep with a LogTimeStep or some other step that takes long enough for it to get where it's told to go.
     static public class ServoStep extends Step {
         Servo mServo;
         double mPosition;          // target position of servo
         Timer mTimer;              // Timer for this Step
+        double mFullRangeTime;     // time (sec) it takes to move servo from 0..1 or v.v.
 
+        // this constructor assumes client sequence is dealing with waiting for the servo to get where it's going
         public ServoStep(Servo servo, double position) {
             mServo = servo;
             mPosition = position;
             mTimer = null;
+            mFullRangeTime = 0.0;   // servo is assumed to be instantaneous if not told otherwise
+        }
+
+        // this constructor waits for a time determined by the given full range motion time and the difference
+        // between the commanded position of this step and the previous commanded position of the Servo object.
+        public ServoStep(Servo servo, double position, double fullRangeTime) {
+            mServo = servo;
+            mPosition = position;
+            mTimer = null;
+            mFullRangeTime = fullRangeTime;   // assumed if not told otherwise
         }
 
         public boolean loop() {
             super.loop();
 
             if (firstLoopCall()) {
-                // tell the servo to go to the target position on the first call
-                mServo.setPosition(mPosition);
-
-                // and start a timer that estimates when the motion will complete
-                // assuming servo goes at about 300 degrees/sec and 0..1 range is about 180 degrees
-                double seconds = (mPosition-mServo.getPosition());
+                // start a timer that estimates when the motion will complete
+                // assuming servo has remembered the last position it was ordered to and
+                // assuming servo takes mFullRangeTime to go through full range (0..1)
+                double seconds = Double.isNaN(mServo.getPosition())     // uncommanded Servo may return NaN for position
+                        ? 0.0           // in which case, we set our wait time to zero (i.e. this step completes immediately)
+                        : Math.abs(mPosition-mServo.getPosition()) * mFullRangeTime;    // estimate wait time
                 mTimer = new Timer(seconds);
                 mTimer.start();
+
+                // now tell the servo to go to the target position
+                mServo.setPosition(mPosition);
             }
 
             // we're done when we've waited long enough for

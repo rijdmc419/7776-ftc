@@ -1298,7 +1298,7 @@ public class AutoLib {
     }
 
 
-    // some Steps that use Vuforia camera-based input
+    // some Steps that use camera-based input
 
     // a Step that provides Vuforia-based guidance to motors controlled by other concurrent Steps (e.g. encoder or time-based)
     // assumes an even number of concurrent drive motor steps assuming order fr, br, fl, bl driving Squirrely Wheels

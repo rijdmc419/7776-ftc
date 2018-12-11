@@ -19,9 +19,9 @@ public class TensorFlowOpMode extends OpMode{
     public void init() {
         robot.init(hardwareMap);
         turnStep = new AutoLib.TurnByEncoderStep(robot.fr, robot.br, robot.fl, robot.bl, 0, 0, 0, 0, true);
-        mSeq.add(new TensorFlowStep(this, turnStep, robot, returnStep, turnToCraterStep, driveAfterTurn));
-        mSeq.add(turnStep);
-        mSeq.add(returnStep);
+        mSeq.add(new TensorFlowStepNew(this, turnStep, robot, returnStep, turnToCraterStep, driveAfterTurn));
+        /*mSeq.add(turnStep);
+        mSeq.add(returnStep);*/
     }
 
     @Override

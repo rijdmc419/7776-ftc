@@ -1,6 +1,7 @@
 package org.firstinspires.ftc.teamcode._Auto;
 
 import com.qualcomm.robotcore.eventloop.opmode.Autonomous;
+import com.qualcomm.robotcore.eventloop.opmode.Disabled;
 import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
 
 import org.firstinspires.ftc.robotcore.external.ClassFactory;
@@ -11,6 +12,7 @@ import org.firstinspires.ftc.teamcode._Libs.AutoLib;
 
 import java.util.List;
 
+@Disabled
 @Autonomous(name = "TensorFlowTest")
 public class TensorFlowTest extends LinearOpMode {
     private static final String TFOD_MODEL_ASSET = "RoverRuckus.tflite";

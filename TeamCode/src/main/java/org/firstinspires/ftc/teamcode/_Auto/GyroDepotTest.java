@@ -1,14 +1,16 @@
 package org.firstinspires.ftc.teamcode._Auto;
 
+import com.qualcomm.hardware.modernrobotics.ModernRoboticsI2cGyro;
 import com.qualcomm.robotcore.eventloop.opmode.Autonomous;
 import com.qualcomm.robotcore.eventloop.opmode.OpMode;
 import com.qualcomm.robotcore.hardware.DcMotor;
 
 import org.firstinspires.ftc.teamcode._Libs.AutoLib;
+import org.firstinspires.ftc.teamcode._Libs.SensorLib;
 import org.firstinspires.ftc.teamcode._Libs.hardware.RoverRuckusHardware;
 
-@Autonomous(name = "DepotAutoMain")
-public class RoverRuckusAutoDepot extends OpMode{
+@Autonomous(name = "GyroDepotTest")
+public class GyroDepotTest extends OpMode{
     RoverRuckusHardware robot =  new RoverRuckusHardware();
     private AutoLib.Sequence mSeq = new AutoLib.LinearSequence();
     private AutoLib.TurnByEncoderStep turnStep;

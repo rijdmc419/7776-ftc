@@ -14,7 +14,7 @@ import org.firstinspires.ftc.teamcode._Libs.hardware.RoverRuckusHardware;
 
 import java.util.List;
 
-public class TensorFlowStepNew extends AutoLib.Step {
+public class GyroSampling extends AutoLib.Step {
     private static final String TFOD_MODEL_ASSET = "RoverRuckus.tflite";
     private static final String LABEL_GOLD_MINERAL = "Gold Mineral";
     private static final String LABEL_SILVER_MINERAL = "Silver Mineral";
@@ -47,15 +47,17 @@ public class TensorFlowStepNew extends AutoLib.Step {
 
     OpMode mOpMode;
     AutoLib.Timer mTimer;
-    AutoLib.TurnByEncoderStep mTurnStep;
-    AutoLib.TurnByEncoderStep mReturnStep;
-    AutoLib.TurnByEncoderStep mTurnToCraterStep;
+    AutoLib.AzimuthTolerancedTurnStep mTurnStep;
+    AutoLib.AzimuthTolerancedTurnStep mReturnStep;
+    AutoLib.AzimuthTolerancedTurnStep mTurnToCraterStep;
     AutoLib.TurnByEncoderStep mDriveAfterTurn;
     RoverRuckusHardware mRobot;
     float mGoldPositionAngle;
     int mGoldPosition;
+    int mGyroAngle;
 
-    public TensorFlowStepNew(OpMode opMode, AutoLib.TurnByEncoderStep turnStep, RoverRuckusHardware robot, AutoLib.TurnByEncoderStep returnStep, AutoLib.TurnByEncoderStep turnToCraterStep, AutoLib.TurnByEncoderStep driveAfterTurn) {
+    public GyroSampling(OpMode opMode, AutoLib.AzimuthTolerancedTurnStep turnStep, RoverRuckusHardware robot, AutoLib.AzimuthTolerancedTurnStep returnStep,
+                        AutoLib.AzimuthTolerancedTurnStep turnToCraterStep, AutoLib.TurnByEncoderStep driveAfterTurn, int gyroAngle) {
         mOpMode = opMode;
         mTurnStep = turnStep;
         mReturnStep = returnStep;
@@ -63,6 +65,8 @@ public class TensorFlowStepNew extends AutoLib.Step {
         mTurnToCraterStep = turnToCraterStep;
         mDriveAfterTurn = driveAfterTurn;
         mRobot = robot;
+        mGyroAngle = gyroAngle;
+        mTimer = new AutoLib.Timer(3);
 
         initVuforia();
 
@@ -97,28 +101,29 @@ public class TensorFlowStepNew extends AutoLib.Step {
                             mOpMode.telemetry.addData("Gold Position Angle", mGoldPositionAngle);
                             if(mGoldPositionAngle <= -15) {
                                 mGoldPosition = 0;
-                                mTurnStep.set(1.0, -1.0, 450, -450);
-                                mReturnStep.set(-1.0, 1.0, -850, 850);
+                                mTurnStep.setHeading(45);
+                                mReturnStep.setHeading(-45);
                                 mDriveAfterTurn.set(1.0, 1.0, 3000, 3000);
-                                mTurnToCraterStep.set(1.0f, -1.0f, 2000, -2000);
+                                mTurnToCraterStep.setHeading(135);
                                 tfod.shutdown();
                                 return true;
                             }
                             else if (mGoldPositionAngle < 15) {
                                 mGoldPosition = 1;
-                                mTurnStep.set(0.0, 0.0, 0, 0);
-                                mReturnStep.set(0.0, 0.0, 0, 0);
+                                mTurnStep.setHeading(0);
+                                mReturnStep.setHeading(0);
                                 mDriveAfterTurn.set(1.0, 1.0, 2100, 2100);
-                                mTurnToCraterStep.set(1.0f, -1.0f, 1600, -1600);
+                                mTurnToCraterStep.setHeading(135);
+                                mGyroAngle = 0;
                                 tfod.shutdown();
                                 return true;
                             }
                             else if (mGoldPositionAngle >= 15) {
                                 mGoldPosition = 2;
-                                mTurnStep.set(-1.0, 1.0, -500, 500);
+                                mTurnStep.setHeading(-45);
                                 mDriveAfterTurn.set(1.0, 1.0, 3200, 3200);
-                                mReturnStep.set(1.0, -1.0, 750, -750);
-                                mTurnToCraterStep.set(1.0f, -1.0f, 1300, -1300);
+                                mReturnStep.setHeading(45);
+                                mGyroAngle = -45;
                                 tfod.shutdown();
                                 return true;
                             }

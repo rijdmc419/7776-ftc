@@ -32,6 +32,10 @@ public class BlobFinder {
 
     // return number of pixels in biggest blob of given color
     public int find(int c) {
+        return find(c, 1);
+    }
+
+    public int find(int c, int sample) {
 
         // save color we're looking for so we don't have to pass it recursively
         color = c;
@@ -48,7 +52,6 @@ public class BlobFinder {
         bbMax.set(-infinity, -infinity);
 
         // Search for blob starting at each Nth pixel
-        final int sample=1;
         for (int x=0; x<image.getWidth(); x+=sample) {
             for (int y = 0; y < image.getHeight(); y+=sample) {
                 // Deep travel that pixel
@@ -71,10 +74,15 @@ public class BlobFinder {
         return bbCount;
     }
 
-    // get x and y of blob centroid
-    public Point getOrigin() { return bbOrigin; }
+    // get x and y of blob centroid and limit points
     public Point getCentroid() {
         return new Point((bbMin.x+bbMax.x)/2, (bbMin.y+bbMax.y)/2);
+    }
+    public Point getBoundsMin() {
+        return bbMin;
+    }
+    public Point getBoundsMax() {
+        return bbMax;
     }
 
     // This is the deep search function - compute the number of connected pixels of
@@ -118,7 +126,6 @@ public class BlobFinder {
             count++;
 
             // Search for adjacent pixels (up, left, right, down)
-            // recursively
             pending.add(new Point(x, y-1));
             pending.add(new Point(x-1, y));
             pending.add(new Point(x+1, y));

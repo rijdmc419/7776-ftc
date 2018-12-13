@@ -407,30 +407,47 @@ public class AutoLib {
 
     // a Step that drives a Servo to a given position
     // it would be nice if we got actual position info back from the servo, but that's not
-    // how it works, so we just wait long enough for it to probably get where it's told to go.
+    // how it works, so client sequences should either
+    // * tell us how long it takes for the servo travel through its full range (0..1) by using the second constructor, or
+    // * follow each ServoStep with a LogTimeStep or some other step that takes long enough for it to get where it's told to go.
     static public class ServoStep extends Step {
         Servo mServo;
         double mPosition;          // target position of servo
         Timer mTimer;              // Timer for this Step
+        double mFullRangeTime;     // time (sec) it takes to move servo from 0..1 or v.v.
 
+        // this constructor assumes client sequence is dealing with waiting for the servo to get where it's going
         public ServoStep(Servo servo, double position) {
             mServo = servo;
             mPosition = position;
             mTimer = null;
+            mFullRangeTime = 0.0;   // servo is assumed to be instantaneous if not told otherwise
+        }
+
+        // this constructor waits for a time determined by the given full range motion time and the difference
+        // between the commanded position of this step and the previous commanded position of the Servo object.
+        public ServoStep(Servo servo, double position, double fullRangeTime) {
+            mServo = servo;
+            mPosition = position;
+            mTimer = null;
+            mFullRangeTime = fullRangeTime;   // assumed if not told otherwise
         }
 
         public boolean loop() {
             super.loop();
 
             if (firstLoopCall()) {
-                // tell the servo to go to the target position on the first call
-                mServo.setPosition(mPosition);
-
-                // and start a timer that estimates when the motion will complete
-                // assuming servo goes at about 300 degrees/sec and 0..1 range is about 180 degrees
-                double seconds = (mPosition-mServo.getPosition());
+                // start a timer that estimates when the motion will complete
+                // assuming servo has remembered the last position it was ordered to and
+                // assuming servo takes mFullRangeTime to go through full range (0..1)
+                double seconds = Double.isNaN(mServo.getPosition())     // uncommanded Servo may return NaN for position
+                        ? 0.0           // in which case, we set our wait time to zero (i.e. this step completes immediately)
+                        : Math.abs(mPosition-mServo.getPosition()) * mFullRangeTime;    // estimate wait time
                 mTimer = new Timer(seconds);
                 mTimer.start();
+
+                // now tell the servo to go to the target position
+                mServo.setPosition(mPosition);
             }
 
             // we're done when we've waited long enough for
@@ -519,6 +536,7 @@ public class AutoLib {
         public void setRelativeDirection(float direction);      // relative to current orientation (heading)
         public void setHeading(float heading);
         public void setPower(float power);
+        public void setMaxPower(float power);
     }
 
 
@@ -553,7 +571,7 @@ public class AutoLib {
             }
             mMotorSteps = motorsteps;
             mPower = power;
-            mMaxPower = 1.0f;
+            mMaxPower = power;
         }
 
         // set max allowed power including direction correction ---
@@ -629,6 +647,143 @@ public class AutoLib {
 
     }
 
+    // a Step that provides guidance to motors controlled by other concurrent Steps (e.g. encoder or time-based)
+    // assumes an even number of concurrent drive motor steps in order right ..., left ...
+    // this step tries to steer the robot by adjusting the left vs. right motors to change the robot's heading in response
+    // to error inputs from some other sensor-based step. These are set through calls to any of setDirection, setRelativeDirection, or setHeading.
+    // deviations to left are positive, to right are negative (right handed Yaw axis)
+    static public class ErrorGuideStep extends MotorGuideStep implements SetDirectionHeadingPower {
+        private float mPower;                               // basic power setting of all 4 motors -- adjusted for steering along path
+        private float mDirection;                           // current deviation from direction along which the robot should move (0 on course; positive CCW)
+        private OpMode mOpMode;                             // needed so we can log output (may be null)
+        private SensorLib.PID mPid;                         // proportional–integral–derivative controller (PID controller)
+        private double mPrevTime;                           // time of previous loop() call
+        private ArrayList<SetPower> mMotorSteps;            // the motor steps we're guiding - assumed order is right ... left ...
+        private float mMaxPower;                            // max allowed power including direction correction
+
+        public ErrorGuideStep(OpMode mode, SensorLib.PID pid, ArrayList<SetPower> motorsteps, float power)
+        {
+            mOpMode = mode;
+            mDirection = 0;     // initially no error
+            if (pid != null)
+                mPid = pid;     // client is supplying PID controller for correcting heading errors
+            else {
+                // construct a default PID controller for correcting heading errors
+                final float Kp = 0.03f;        // degree heading proportional term correction per degree of deviation
+                final float Ki = 0.005f;        // ... integrator term
+                final float Kd = 0.0f;         // ... derivative term
+                final float KiCutoff = 0.0f;   // maximum angle error for which we update integrator
+                mPid = new SensorLib.PID(Kp, Ki, Kd, KiCutoff);
+            }
+            mMotorSteps = motorsteps;
+            mPower = power;
+            mMaxPower = power;
+        }
+
+        // set max allowed power including direction correction ---
+        // e.g. to turn in place slowly, set power=0 and maxPower<1.0
+        public void setMaxPower(float mp) {
+            mMaxPower = mp;
+        }
+
+        // set motor control steps this step should control (assumes ctor called with null argument)
+        public void set(ArrayList<AutoLib.SetPower> motorsteps)
+        {
+            mMotorSteps = motorsteps;
+        }
+
+        // update target direction, heading, and power --
+        // used by interactive teleop modes to redirect the step from controller input
+        // and by e.g. camera based guide steps to steer the robot to a target
+        // convention: for consistency with gyros, headings are positive CCW, so here deviations to left are positive, to right are negative
+        public void setDirection(float direction) { mDirection = direction; }
+        public void setRelativeDirection(float direction) { mDirection = direction; }
+        public void setHeading(float heading) { mDirection = heading; } // heading == direction for this guide step
+        public void setPower(float power) { mPower = power; }
+
+        public boolean loop()
+        {
+            super.loop();
+
+            // initialize previous-time on our first call -> dt will be zero on first call
+            if (firstLoopCall()) {
+                mPrevTime = mOpMode.getRuntime();           // use timer provided by OpMode
+            }
+
+            float error = mDirection;   // deviation from desired heading
+
+            // compute delta time since last call -- used for integration time of PID step
+            double time = mOpMode.getRuntime();
+            double dt = time - mPrevTime;
+            mPrevTime = time;
+
+            // feed error through PID to get motor power correction value
+            float correction = mPid.loop(error, (float)dt);
+
+            // compute new right/left motor powers
+            float rightPower = mPower - correction;
+            float leftPower = mPower + correction;
+
+            // normalize so neither has magnitude > maxPower
+            float norm = normalize(mMaxPower, rightPower, leftPower);
+            rightPower *= norm;
+            leftPower *= norm;
+
+            // set the motor powers -- handle both time-based and encoder-based motor Steps
+            // assumed order is right motors followed by an equal number of left motors
+            int i = 0;
+            for (SetPower ms : mMotorSteps) {
+                ms.setPower((i++ < mMotorSteps.size()/2) ? rightPower : leftPower);
+            }
+
+            // log some data
+            if (mOpMode != null) {
+                mOpMode.telemetry.addData("error ", mDirection);
+                mOpMode.telemetry.addData("left power ", leftPower);
+                mOpMode.telemetry.addData("right power ", rightPower);
+            }
+
+            // guidance step always returns "done" so the CS in which it is embedded completes when
+            // all the motors it's controlling are done
+            return true;
+        }
+
+    }
+
+    // dummy drive step for debug mode where we don't have motors or gyros
+    static public class MotorLogStep extends AutoLib.MotorGuideStep implements AutoLib.SetDirectionHeadingPower {
+        OpMode mOpMode;
+
+        public MotorLogStep(OpMode opmode) {
+            mOpMode = opmode;
+        }
+
+        public void setDirection(float direction)              // absolute
+        {
+            mOpMode.telemetry.addData("setDirection", direction);
+        }
+        public void setRelativeDirection(float direction)      // relative to current orientation (heading)
+        {
+            mOpMode.telemetry.addData("setRelativeDirection", direction);
+        }
+        public void setHeading(float heading)
+        {
+            mOpMode.telemetry.addData("setHeading", heading);
+        }
+        public void setPower(float power)
+        {
+            mOpMode.telemetry.addData("setPower", power);
+        }
+        public void setMaxPower(float power)
+        {
+            mOpMode.telemetry.addData("setMaxPower", power);
+        }
+
+        public boolean loop() {
+            return false;
+        }
+    }
+
     // a Step that waits for valid location and heading data to be available --- e.g from Vuforia --
     // when added to either a dead reckoning or gyro-based movement step, it can be used to end that step
     // when we're close enough to the targets for Vuforia to start being used. The base step should be
@@ -658,23 +813,42 @@ public class AutoLib {
         }
     }
 
-    // a Step that returns true iff the given HeadingSensor reports a heading within some tolerance of a desired heading.
-    static public class GyroTestHeadingStep extends Step {
-        private HeadingSensor mSensor;
-        private double mHeading;
-        private double mTolerance;
 
-        public GyroTestHeadingStep(HeadingSensor sensor, double heading, double tol){
+    // a Step that returns true when the given HeadingSensor settles at a heading within some tolerance of a desired heading.
+    static public class GyroTestHeadingStep extends Step {
+        HeadingSensor mSensor;
+        double mHeading;
+        double mTolerance;
+        int mInTolCount, mReqTolCount;
+        Timer mTimer;       // Timer for this Step
+
+        public GyroTestHeadingStep(HeadingSensor sensor, double heading, double tol, int count, float timeout){
             mSensor = sensor;
             mHeading = heading;
             mTolerance = tol;
+            mReqTolCount = count;
+            mInTolCount = 0;
+            mTimer = new Timer(timeout);
         }
 
         public boolean loop() {
             super.loop();
 
-            if (mSensor.haveHeading())
-                return (Math.abs(mSensor.getHeading()-mHeading) < mTolerance);
+            // start the Timer on our first call
+            if (firstLoopCall())
+                mTimer.start();
+
+            // can't do this forever -- time out if timer expires
+            if (mTimer.done())        // appears to cycle here at about 3ms/loop
+                return true;            // we're done whether or not we were ever within tolerance
+
+            if (mSensor.haveHeading()) {
+                if (Math.abs(SensorLib.Utils.wrapAngle(mSensor.getHeading() - mHeading)) < mTolerance)
+                    mInTolCount++;
+                else
+                    mInTolCount = 0;    // reset
+                return (mInTolCount >= mReqTolCount);
+            }
             else
                 return false;
         }
@@ -785,7 +959,7 @@ public class AutoLib {
                 mPid = new SensorLib.PID(Kp, Ki, Kd, KiCutoff);
             }
             mMotorSteps = motorsteps;
-            mMaxPower = 1.0f;
+            mMaxPower = power;
         }
 
         // set max allowed power including direction correction ---
@@ -876,6 +1050,13 @@ public class AutoLib {
     static public class AzimuthTimedDriveStep extends ConcurrentSequence implements SetDirectionHeadingPower {
 
         public AzimuthTimedDriveStep(OpMode mode, float heading, HeadingSensor gyro, SensorLib.PID pid,
+                                     DcMotor motors[], float power, float maxPower, float time, boolean stop)
+        {
+            this(mode, heading, gyro, pid, motors, power, time, stop);
+            this.setMaxPower(maxPower);
+        }
+
+        public AzimuthTimedDriveStep(OpMode mode, float heading, HeadingSensor gyro, SensorLib.PID pid,
                                      DcMotor motors[], float power, float time, boolean stop)
         {
             // add a concurrent Step to control each motor
@@ -902,12 +1083,20 @@ public class AutoLib {
         public void setRelativeDirection(float direction) { ((GyroGuideStep)mSteps.get(0)).setRelativeDirection(direction); }
         public void setHeading(float heading) { ((GyroGuideStep)mSteps.get(0)).setHeading(heading); }
         public void setPower(float power) { ((GyroGuideStep)mSteps.get(0)).setPower(power); }
+        public void setMaxPower(float power) { ((GyroGuideStep)mSteps.get(0)).setMaxPower(power); }
     }
 
     // a Step that uses gyro input to drive along a given course for a given distance given by motor encoders.
     // uses a GyroGuideStep to adjust power to 2 or 4 motors.
     // assumes a robot with up to 4 drive motors in assumed order right motors, left motors
     static public class AzimuthCountedDriveStep extends ConcurrentSequence implements SetDirectionHeadingPower {
+
+        public AzimuthCountedDriveStep(OpMode mode, float heading, HeadingSensor gyro, SensorLib.PID pid,
+                                     DcMotor motors[], float power, float maxPower, int count, boolean stop)
+        {
+            this(mode, heading, gyro, pid, motors, power, count, stop);
+            this.setMaxPower(maxPower);
+        }
 
         public AzimuthCountedDriveStep(OpMode mode, float heading, HeadingSensor gyro, SensorLib.PID pid,
                                        DcMotor motors[], float power, int count, boolean stop)
@@ -936,7 +1125,7 @@ public class AutoLib {
         public void setRelativeDirection(float direction) { ((GyroGuideStep)mSteps.get(0)).setRelativeDirection(direction); }
         public void setHeading(float heading) { ((GyroGuideStep)mSteps.get(0)).setHeading(heading); }
         public void setPower(float power) { ((GyroGuideStep)mSteps.get(0)).setPower(power); }
-
+        public void setMaxPower(float power) { ((GyroGuideStep)mSteps.get(0)).setMaxPower(power); }
     }
 
     // a Step that uses gyro input to drive along a given course until the given DistanceSensor
@@ -978,7 +1167,61 @@ public class AutoLib {
         public void setRelativeDirection(float direction) { ((GyroGuideStep)mSteps.get(0)).setRelativeDirection(direction); }
         public void setHeading(float heading) { ((GyroGuideStep)mSteps.get(0)).setHeading(heading); }
         public void setPower(float power) { ((GyroGuideStep)mSteps.get(0)).setPower(power); }
+        public void setMaxPower(float power) { ((GyroGuideStep)mSteps.get(0)).setMaxPower(power); }
     }
+
+    // a Step that turns in place - just shorthand for a special case of its base class.
+    // turn in place to given heading using given gyro sensor, waiting for given time.
+    static public class AzimuthTimedTurnStep extends AzimuthTimedDriveStep {
+
+        public AzimuthTimedTurnStep(OpMode mode, float heading, HeadingSensor gyro, SensorLib.PID pid,
+                                    DcMotor motors[], float power, float time, boolean stop)
+        {
+            super(mode, heading, gyro, pid, motors, 0, power, time, stop);
+        }
+
+    }
+
+    // a Step that turns in place -
+    // turn in place to given heading using given gyro sensor, waiting for given time.
+    static public class AzimuthTolerancedTurnStep extends ConcurrentSequence implements SetDirectionHeadingPower {
+
+        public AzimuthTolerancedTurnStep(OpMode mode, float heading, HeadingSensor gyro, SensorLib.PID pid,
+                                    DcMotor motors[], float power, float tol, float timeout)
+        {
+            // add a concurrent Step to control each motor
+            ArrayList<SetPower> steps = new ArrayList<SetPower>();
+            for (DcMotor em : motors)
+                if (em != null) {
+                    TimedMotorStep step = new TimedMotorStep(em, power, 0, false);
+                    this.add(step);
+                    steps.add(step);
+                }
+
+            // add a concurrent Step to determine when we're done (close enough).
+            this.preAdd(new GyroTestHeadingStep(gyro, heading, tol, 10, timeout));
+
+            // add a concurrent Step to control the motor steps based on gyro input
+            // put it at the front of the list so it can update the motors BEFORE their steps run
+            this.preAdd(new GyroGuideStep(mode, heading, gyro, pid, steps, 0));
+
+            // to turn in place, we set the power to zero (above) and the max power of the GyroGuideStep to the given power
+            setMaxPower(power);
+        }
+
+        // the base class loop function does all we need -- it will return "done" when
+        // all the motors are done.
+
+        // update target direction, heading, and power --
+        // used e.g. by interactive teleop modes to redirect the step from controller input
+        public void setDirection(float direction) { ((GyroGuideStep)mSteps.get(0)).setDirection(direction); }
+        public void setRelativeDirection(float direction) { ((GyroGuideStep)mSteps.get(0)).setRelativeDirection(direction); }
+        public void setHeading(float heading) { ((GyroGuideStep)mSteps.get(0)).setHeading(heading); }
+        public void setPower(float power) { ((GyroGuideStep)mSteps.get(0)).setPower(power); }
+        public void setMaxPower(float power) { ((GyroGuideStep)mSteps.get(0)).setMaxPower(power); }
+
+    }
+
 
     // a Step that uses gyro input to stabilize the robot orientation while driving along a given absolute heading
     // using squirrely wheels, for a given time.
@@ -1010,6 +1253,7 @@ public class AutoLib {
         public void setRelativeDirection(float direction) { ((GyroGuideStep)mSteps.get(0)).setRelativeDirection(direction); }
         public void setHeading(float heading) { ((SquirrelyGyroGuideStep)mSteps.get(0)).setHeading(heading); }
         public void setPower(float power) { ((SquirrelyGyroGuideStep)mSteps.get(0)).setPower(power); }
+        public void setMaxPower(float power) { ((GyroGuideStep)mSteps.get(0)).setMaxPower(power); }
     }
 
     // a Step that uses gyro input to stabilize the robot orientation while driving along a given absolute heading
@@ -1044,6 +1288,7 @@ public class AutoLib {
         public void setRelativeDirection(float direction) { ((GyroGuideStep)mSteps.get(0)).setRelativeDirection(direction); }
         public void setHeading(float heading) { ((SquirrelyGyroGuideStep)mSteps.get(0)).setHeading(heading); }
         public void setPower(float power) { ((SquirrelyGyroGuideStep)mSteps.get(0)).setPower(power); }
+        public void setMaxPower(float power) { ((GyroGuideStep)mSteps.get(0)).setMaxPower(power); }
     }
 
     // a Step that uses gyro input to stabilize the robot orientation while driving along a given relative heading
@@ -1085,6 +1330,7 @@ public class AutoLib {
         public void setRelativeDirection(float direction) { ((GyroGuideStep)mSteps.get(0)).setRelativeDirection(direction); }
         public void setHeading(float heading) { ((SquirrelyGyroGuideStep)mSteps.get(0)).setHeading(heading); }
         public void setPower(float power) { ((SquirrelyGyroGuideStep)mSteps.get(0)).setPower(power); }
+        public void setMaxPower(float power) { ((GyroGuideStep)mSteps.get(0)).setMaxPower(power); }
     }
 
 

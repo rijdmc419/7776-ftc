@@ -69,7 +69,7 @@ public class CameraTestOpVfRS extends OpMode {
     public void loop() {
 
         // test image access through Vuforia
-        Bitmap bmIn = mVLib.getBitmap(16);
+        Bitmap bmIn = mVLib.getBitmap(8);
         if (bmIn != null) {
             // create the output bitmap for the posterization RenderScript
             Bitmap bmOut = Bitmap.createBitmap(bmIn.getWidth(), bmIn.getHeight(), Bitmap.Config.RGB_565);
@@ -90,7 +90,9 @@ public class CameraTestOpVfRS extends OpMode {
             telemetry.addData("Center Out", String.format("0x%08x", mBmOut.getPixel(mBmOut.getWidth()/2, mBmOut.getHeight()/2)));
 
             BlobFinder bf = new BlobFinder(mBmOut);
-            int count = bf.find(0xFFFFFF00);    // posterized yellow value
+            final int sample = 2;       // look for blobs at every Nth pixel
+            final int blobColor = 0xFFFFFF00;
+            int count = bf.find(blobColor, sample);    // posterized yellow value
             Point centroid = bf.getCentroid();
             telemetry.addData("blob count", count);
             telemetry.addData("centroid", centroid.x + "," + centroid.y);

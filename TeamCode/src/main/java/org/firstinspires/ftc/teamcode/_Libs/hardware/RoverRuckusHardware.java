@@ -63,6 +63,6 @@ public class RoverRuckusHardware {
         lift.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
         lift2.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
 
-        markerServo.setPosition(1);
+        markerServo.setPosition(-1);
     }
 }

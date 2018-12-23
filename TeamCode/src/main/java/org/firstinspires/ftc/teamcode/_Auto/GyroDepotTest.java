@@ -51,15 +51,15 @@ public class GyroDepotTest extends OpMode{
         mGyro = new BNO055IMUHeadingSensor(hardwareMap.get(BNO055IMU.class, "imu"));
         mGyro.init(4);  // 4: rev hub mounted flat
 
-        robot.lift.setPower(-.5);
-        robot.lift2.setPower(-.5);
+      //  robot.lift.setPower(-.5);
+     //   robot.lift2.setPower(-.5);
         turnStep = new AutoLib.AzimuthTolerancedTurnStep(this, 0f, mGyro, mPid, mMotors, .5f, 5, 3);
         returnStep = new AutoLib.AzimuthTolerancedTurnStep(this, 0f, mGyro, mPid, mMotors, .5f, 5, 3);
         turnToCraterStep = new AutoLib.AzimuthTolerancedTurnStep(this, 0f, mGyro, mPid, mMotors, .5f, 5, 3);
         driveAfterTurn = new AutoLib.TurnByEncoderStep(robot.fr, robot.br, robot.fl, robot.bl, 1.0f, 1.0f, 0, 0, true);
 
         mSeq.add(new GyroSampling(this, turnStep, robot, returnStep, turnToCraterStep, driveAfterTurn, gyroAngle));
-        mSeq.add(new AutoLib.MoveByEncoderStep(robot.lift, robot.lift2, .75f, 600, true));
+       // mSeq.add(new AutoLib.MoveByEncoderStep(robot.lift, robot.lift2, .75f, 600, true));
         mSeq.add(new AutoLib.AzimuthCountedDriveStep(this, 0, mGyro, mPid, mMotors, .75f, 1000, false));
         mSeq.add(turnStep);
         mSeq.add(new AutoLib.MoveByEncoderStep(robot.fr, robot.br, robot.fl, robot.bl, .75f, 3600, true));

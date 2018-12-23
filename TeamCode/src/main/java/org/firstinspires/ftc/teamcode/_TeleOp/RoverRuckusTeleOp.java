@@ -20,6 +20,8 @@ public class RoverRuckusTeleOp extends OpMode{
     RoverRuckusHardware robot =  new RoverRuckusHardware();
     double left, right;
     double speedFactor;
+    double jointSpeed;
+    double jointSpeedFactor = 1;
 
     @Override
     public void init() {
@@ -37,8 +39,13 @@ public class RoverRuckusTeleOp extends OpMode{
         left = -Math.pow(gamepad1.left_stick_y, 3) * speedFactor;
         right = -Math.pow(gamepad1.right_stick_y, 3) * speedFactor;
 
+        joint();
         powSet();
         telemetry();
+    }
+
+    void joint(){
+        jointSpeed = -Math.pow(gamepad2.left_stick_y, 3)* jointSpeedFactor;
     }
 
     void telemetry(){
@@ -47,6 +54,7 @@ public class RoverRuckusTeleOp extends OpMode{
         //telemetry.addData("Gamepad 1", gamepad1);
         //telemetry.addData("Gamepad 2", gamepad2);
 
+        telemetry.addData("Joint", printFormat.format(jointSpeed));
         telemetry.addData("Speed Factor", printFormat.format(speedFactor));
         telemetry.addData("Left", printFormat.format(left));
         telemetry.addData("Right", printFormat.format(right));
@@ -57,6 +65,8 @@ public class RoverRuckusTeleOp extends OpMode{
         robot.bl.setPower(left);
         robot.fr.setPower(right);
         robot.br.setPower(right);
+        robot.joint.setPower(jointSpeed);
+        robot.joint2.setPower(jointSpeed);
     }
 
     void driveTrainSpeed(){

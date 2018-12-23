@@ -14,8 +14,8 @@ public class RoverRuckusHardware {
     public DcMotor bl = null;
     public DcMotor fr  = null;
     public DcMotor br   = null;
-    public DcMotor lift = null;
-    public DcMotor lift2 = null;
+    public DcMotor joint = null;
+    public DcMotor joint2 = null;
 
     public Servo markerServo;
 
@@ -29,39 +29,39 @@ public class RoverRuckusHardware {
         fr = hwMap.get(DcMotor.class, "fr");
         br = hwMap.get(DcMotor.class, "br");
 
-        lift = hwMap.get(DcMotor.class, "lift");
-        lift2 = hwMap.get(DcMotor.class, "lift2");
+        joint = hwMap.get(DcMotor.class, "joint");
+        joint2 = hwMap.get(DcMotor.class, "joint2");
 
         markerServo = hwMap.get(Servo.class, "markerServo");
 
         fl.setDirection(DcMotor.Direction.REVERSE);
         bl.setDirection(DcMotor.Direction.REVERSE);
-        lift2.setDirection(DcMotor.Direction.REVERSE);
+        joint2.setDirection(DcMotor.Direction.REVERSE);
 
         fr.setDirection(DcMotor.Direction.FORWARD);
         br.setDirection(DcMotor.Direction.FORWARD);
-        lift.setDirection(DcMotor.Direction.FORWARD);
+        joint.setDirection(DcMotor.Direction.FORWARD);
 
         fl.setPower(0);
         bl.setPower(0);
         fr.setPower(0);
         br.setPower(0);
-        lift.setPower(0);
-        lift2.setPower(0);
+        joint.setPower(0);
+        joint2.setPower(0);
 
         fl.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
         bl.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
         fr.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
         br.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
-        lift.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
-        lift2.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
+        joint.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
+        joint2.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
 
         fl.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
         bl.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
         fr.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
         br.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
-        lift.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
-        lift2.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
+        joint.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
+        joint2.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
 
         markerServo.setPosition(-1);
     }

@@ -21,7 +21,9 @@ public class RoverRuckusTeleOp extends OpMode{
     double left, right;
     double speedFactor;
     double jointSpeed;
-    double jointSpeedFactor = 1;
+    double jointSpeedFactor = 0.5;
+    double extendSpeed;
+    double extendSpeedFactor = 0.1;
 
     @Override
     public void init() {
@@ -39,13 +41,23 @@ public class RoverRuckusTeleOp extends OpMode{
         left = -Math.pow(gamepad1.left_stick_y, 3) * speedFactor;
         right = -Math.pow(gamepad1.right_stick_y, 3) * speedFactor;
 
-        joint();
+        jointSpeed = -Math.pow(gamepad2.left_stick_y, 3)* jointSpeedFactor;
+
+        extend();
         powSet();
         telemetry();
     }
 
-    void joint(){
-        jointSpeed = -Math.pow(gamepad2.left_stick_y, 3)* jointSpeedFactor;
+    void extend(){
+        if(gamepad2.left_trigger > 0){
+            extendSpeed = gamepad2.left_trigger * extendSpeedFactor * -1;
+        }
+        else if(gamepad2.right_trigger > 0){
+            extendSpeed = gamepad2.right_trigger * extendSpeedFactor;
+        }
+        else{
+            extendSpeed = 0;
+        }
     }
 
     void telemetry(){
@@ -54,6 +66,7 @@ public class RoverRuckusTeleOp extends OpMode{
         //telemetry.addData("Gamepad 1", gamepad1);
         //telemetry.addData("Gamepad 2", gamepad2);
 
+        telemetry.addData("Extend", printFormat.format(extendSpeed));
         telemetry.addData("Joint", printFormat.format(jointSpeed));
         telemetry.addData("Speed Factor", printFormat.format(speedFactor));
         telemetry.addData("Left", printFormat.format(left));
@@ -67,14 +80,16 @@ public class RoverRuckusTeleOp extends OpMode{
         robot.br.setPower(right);
         robot.joint.setPower(jointSpeed);
         robot.joint2.setPower(jointSpeed);
+        robot.extend.setPower(extendSpeed);
+        robot.extend2.setPower(extendSpeed);
     }
 
     void driveTrainSpeed(){
         if(gamepad1.left_bumper && !gamepad1.right_bumper) //Drivetrain Speed Controls
-         speedFactor = 0.5;
+         speedFactor = 1;
        else if(gamepad1.right_bumper && !gamepad1.left_bumper)
-          speedFactor = 0.05;
+          speedFactor = 0.5;
         else if(!gamepad1.right_bumper && !gamepad1.left_bumper)
-          speedFactor = 0.275;
+          speedFactor = 0.75;
     }
 }

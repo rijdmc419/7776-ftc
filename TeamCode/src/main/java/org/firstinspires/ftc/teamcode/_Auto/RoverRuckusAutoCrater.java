@@ -20,15 +20,15 @@ public class RoverRuckusAutoCrater extends OpMode{
 
     public void init() {
         robot.init(hardwareMap);
-        robot.lift.setPower(-.5);
-        robot.lift2.setPower(-.5);
+      //  robot.lift.setPower(-.5);
+     //   robot.lift2.setPower(-.5);
         turnStep = new AutoLib.TurnByEncoderStep(robot.fr, robot.br, robot.fl, robot.bl, 1.0f, 1.0f, 0, 0, true);
         returnStep = new AutoLib.TurnByEncoderStep(robot.fr, robot.br, robot.fl, robot.bl, 1.0f, 1.0f, 0, 0, true);
         turnToCraterStep = new AutoLib.TurnByEncoderStep(robot.fr, robot.br, robot.fl, robot.bl, 1.0f, 1.0f, 0, 0, true);
         driveAfterTurn = new AutoLib.TurnByEncoderStep(robot.fr, robot.br, robot.fl, robot.bl, 1.0f, 1.0f, 0, 0, true);
 
         mSeq.add(new TensorFlowStepNew(this, turnStep, robot, returnStep, turnToCraterStep, driveAfterTurn));
-        mSeq.add(new AutoLib.MoveByEncoderStep(robot.lift, robot.lift2, 1f, 600, true));
+       // mSeq.add(new AutoLib.MoveByEncoderStep(robot.lift, robot.lift2, 1f, 600, true));
         mSeq.add(new AutoLib.MoveByEncoderStep(robot.fr, robot.br, robot.fl, robot.bl, 1.0f, 500, true));
         mSeq.add(turnStep);
         mSeq.add(new AutoLib.MoveByEncoderStep(robot.fr, robot.br, robot.fl, robot.bl, 1.0f, 4000, true));

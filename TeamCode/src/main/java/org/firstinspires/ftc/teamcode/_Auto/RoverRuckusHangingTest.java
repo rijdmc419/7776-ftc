@@ -16,14 +16,14 @@ public class RoverRuckusHangingTest extends OpMode{
         robot.init(hardwareMap);
         //robot.lift.setPower(-1);
         //robot.lift2.setPower(-1);
-        robot.lift.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
-        robot.lift2.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
-        robot.lift.setMode(DcMotor.RunMode.RUN_TO_POSITION);
-        robot.lift2.setMode(DcMotor.RunMode.RUN_TO_POSITION);
-        robot.lift.setTargetPosition(0);
-        robot.lift2.setTargetPosition(0);
+    //    robot.lift.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
+    //    robot.lift2.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
+      //  robot.lift.setMode(DcMotor.RunMode.RUN_TO_POSITION);
+     //   robot.lift2.setMode(DcMotor.RunMode.RUN_TO_POSITION);
+     //   robot.lift.setTargetPosition(0);
+    //    robot.lift2.setTargetPosition(0);
 
-        mSeq.add(new AutoLib.MoveByEncoderStep(robot.lift, robot.lift2, 1f, 575, true));
+      //  mSeq.add(new AutoLib.MoveByEncoderStep(robot.lift, robot.lift2, 1f, 575, true));
         mSeq.add(new AutoLib.MoveByEncoderStep(robot.fr, robot.br, robot.fl, robot.bl, 1.0f, 6750, true));
         //mSeq.add(new AutoLib.TurnByEncoderStep(robot.fr, robot.fl, 1.0f, -1.0f, 2000, -2000, true));
     }

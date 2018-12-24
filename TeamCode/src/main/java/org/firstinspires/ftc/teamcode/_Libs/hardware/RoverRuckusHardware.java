@@ -19,8 +19,7 @@ public class RoverRuckusHardware {
     public DcMotor extend = null;
     public DcMotor extend2 = null;
 
-    public Servo markerServo;
-    public Servo flipServo;
+    public Servo flapServo;
     public Servo intakeServo;
     public Servo intakeServo2;
 
@@ -40,10 +39,9 @@ public class RoverRuckusHardware {
         extend = hwMap.get(DcMotor.class, "extend");
         extend2 = hwMap.get(DcMotor.class, "extend2");
 
-        flipServo = hwMap.get(Servo.class, "flipServo");
+        flapServo = hwMap.get(Servo.class, "flapServo");
         intakeServo = hwMap.get(Servo.class, "intakeServo");
         intakeServo2 = hwMap.get(Servo.class, "intakeServo2");
-        markerServo = hwMap.get(Servo.class, "markerServo");
 
         fl.setDirection(DcMotor.Direction.REVERSE);
         bl.setDirection(DcMotor.Direction.REVERSE);
@@ -82,7 +80,8 @@ public class RoverRuckusHardware {
         extend.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
         extend2.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
 
-        markerServo.setPosition(-1);
-        flipServo.setPosition(0);
+        flapServo.setPosition(0);
+        intakeServo.setPosition(0);
+        intakeServo2.setPosition(0);
     }
 }

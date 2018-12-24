@@ -67,9 +67,9 @@ public class GyroDepotTest extends OpMode{
         mSeq.add(driveAfterTurn);
         mSeq.add(new AutoLib.AzimuthTolerancedTurnStep(this, -45f, mGyro, mPid, mMotors, .4f, 5, 3));
         mSeq.add(new AutoLib.LogTimeStep(this, "wait for servo", .5f));
-        mSeq.add(new AutoLib.ServoStep(robot.markerServo, 1));
+     //   mSeq.add(new AutoLib.ServoStep(robot.markerServo, 1));
         mSeq.add(new AutoLib.LogTimeStep(this, "wait for servo", .5f));
-        mSeq.add(new AutoLib.ServoStep(robot.markerServo, -1));
+     //   mSeq.add(new AutoLib.ServoStep(robot.markerServo, -1));
         mSeq.add(new AutoLib.LogTimeStep(this, "wait for servo", .5f));
         //mSeq.add(turnToCraterStep);
         mSeq.add(new AutoLib.MoveByEncoderStep(robot.fr, robot.br, robot.fl, robot.bl, -.75f, -6800, true));

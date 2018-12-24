@@ -24,6 +24,7 @@ public class RoverRuckusTeleOp extends OpMode{
     double jointSpeedFactor = 0.5;
     double extendSpeed;
     double extendSpeedFactor = 0.1;
+    double intakeSpeed;
 
     @Override
     public void init() {
@@ -41,11 +42,17 @@ public class RoverRuckusTeleOp extends OpMode{
         left = -Math.pow(gamepad1.left_stick_y, 3) * speedFactor;
         right = -Math.pow(gamepad1.right_stick_y, 3) * speedFactor;
 
-        jointSpeed = -Math.pow(gamepad2.left_stick_y, 3)* jointSpeedFactor;
+        jointSpeed = -Math.pow(gamepad2.left_stick_y, 3) * jointSpeedFactor;
+        intakeSpeed = ((-Math.pow(gamepad2.right_stick_y, 3)) + 1) / 2;
 
+        flap();
         extend();
         powSet();
         telemetry();
+    }
+
+    void flap(){
+
     }
 
     void extend(){
@@ -82,14 +89,17 @@ public class RoverRuckusTeleOp extends OpMode{
         robot.joint2.setPower(jointSpeed);
         robot.extend.setPower(extendSpeed);
         robot.extend2.setPower(extendSpeed);
+
+        robot.intakeServo.setPosition(intakeSpeed);
+        robot.intakeServo2.setPosition(intakeSpeed * -1);
     }
 
     void driveTrainSpeed(){
         if(gamepad1.left_bumper && !gamepad1.right_bumper) //Drivetrain Speed Controls
-         speedFactor = 1;
+         speedFactor = 1; //Fast (left bumper)
        else if(gamepad1.right_bumper && !gamepad1.left_bumper)
-          speedFactor = 0.5;
+          speedFactor = 0.125; //Slow (right bumper)
         else if(!gamepad1.right_bumper && !gamepad1.left_bumper)
-          speedFactor = 0.75;
+          speedFactor = 0.75; //Default (middle speed)
     }
 }

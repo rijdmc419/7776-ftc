@@ -35,9 +35,9 @@ public class depotSamplingTest extends OpMode{
             mSeq.add(new AutoLib.MoveByEncoderStep(robot.fr, robot.br, robot.fl, robot.bl, 1.0f, 3000, true));
             mSeq.add(returnStep);
             mSeq.add(driveAfterTurn);
-            mSeq.add(new AutoLib.ServoStep(robot.markerServo, -1));
+          //  mSeq.add(new AutoLib.ServoStep(robot.markerServo, -1));
             mSeq.add(new AutoLib.LogTimeStep(this, "wait for servo", 1));
-            mSeq.add(new AutoLib.ServoStep(robot.markerServo, 1));
+         //   mSeq.add(new AutoLib.ServoStep(robot.markerServo, 1));
             mSeq.add(turnToCraterStep);
             mSeq.add(new AutoLib.MoveByEncoderStep(robot.fr, robot.br, robot.fl, robot.bl, 1.0f, 6600, true));
             autoWork = true;

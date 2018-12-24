@@ -86,6 +86,8 @@ public class GyroSampling extends AutoLib.Step {
             mTimer.start();
         }
 
+        //one inch is 89.1 inches: c = d * counts per turn / circumference of wheel
+
         Recognition goldMineral = null;
         if (tfod != null) {
             // getUpdatedRecognitions() will return null if no new information is available since
@@ -101,7 +103,7 @@ public class GyroSampling extends AutoLib.Step {
                             mOpMode.telemetry.addData("Gold Position Angle", mGoldPositionAngle);
                             if(mGoldPositionAngle <= -15) {
                                 mGoldPosition = 0;
-                                mTurnStep.setHeading(45);
+                                mTurnStep.setHeading(30);
                                 mReturnStep.setHeading(-45);
                                 mDriveAfterTurn.set(1.0, 1.0, 3000, 3000);
                                 mTurnToCraterStep.setHeading(135);
@@ -112,7 +114,7 @@ public class GyroSampling extends AutoLib.Step {
                                 mGoldPosition = 1;
                                 mTurnStep.setHeading(0);
                                 mReturnStep.setHeading(0);
-                                mDriveAfterTurn.set(1.0, 1.0, 2100, 2100);
+                                mDriveAfterTurn.set(.75f, .75f, 1400, 1400);
                                 mTurnToCraterStep.setHeading(135);
                                 mGyroAngle = 0;
                                 tfod.shutdown();
@@ -120,7 +122,7 @@ public class GyroSampling extends AutoLib.Step {
                             }
                             else if (mGoldPositionAngle >= 15) {
                                 mGoldPosition = 2;
-                                mTurnStep.setHeading(-45);
+                                mTurnStep.setHeading(-40);
                                 mDriveAfterTurn.set(1.0, 1.0, 3200, 3200);
                                 mReturnStep.setHeading(45);
                                 mGyroAngle = -45;

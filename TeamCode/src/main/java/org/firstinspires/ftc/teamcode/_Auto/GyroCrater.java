@@ -11,8 +11,8 @@ import org.firstinspires.ftc.teamcode._Libs.BNO055IMUHeadingSensor;
 import org.firstinspires.ftc.teamcode._Libs.SensorLib;
 import org.firstinspires.ftc.teamcode._Libs.hardware.RoverRuckusHardware;
 
-@Autonomous(name = "DepotMain")
-public class GyroDepotTest extends OpMode{
+@Autonomous(name = "CraterTest")
+public class GyroCrater extends OpMode{
     RoverRuckusHardware robot =  new RoverRuckusHardware();
     private AutoLib.Sequence mSeq = new AutoLib.LinearSequence();
     private AutoLib.AzimuthTolerancedTurnStep turnStep;
@@ -62,16 +62,19 @@ public class GyroDepotTest extends OpMode{
         mSeq.add(new AutoLib.MoveByEncoderStep(robot.lift, robot.lift2, .75f, 600, true));
         mSeq.add(new AutoLib.AzimuthCountedDriveStep(this, 0, mGyro, mPid, mMotors, .75f, 1000, false));
         mSeq.add(turnStep);
-        mSeq.add(new AutoLib.MoveByEncoderStep(robot.fr, robot.br, robot.fl, robot.bl, .75f, 3600, true));
-        mSeq.add(returnStep);
-        mSeq.add(driveAfterTurn);
-        mSeq.add(new AutoLib.AzimuthTolerancedTurnStep(this, -45f, mGyro, mPid, mMotors, .4f, 5, 3));
+        mSeq.add(new AutoLib.MoveByEncoderStep(robot.fr, robot.br, robot.fl, robot.bl, .75f, 2300, true));
+        mSeq.add(new AutoLib.MoveByEncoderStep(robot.fr, robot.br, robot.fl, robot.bl, -.75f, -2300, true));
+        mSeq.add(new AutoLib.AzimuthTolerancedTurnStep(this, -120, mGyro, mPid, mMotors, .4f, 5, 3));
+        mSeq.add(new AutoLib.MoveByEncoderStep(robot.fr, robot.br, robot.fl, robot.bl, -.75f, -4000, true));
+        mSeq.add(new AutoLib.AzimuthTolerancedTurnStep(this, 130f, mGyro, mPid, mMotors, .4f, 5, 3));
+        mSeq.add(new AutoLib.MoveByEncoderStep(robot.fr, robot.br, robot.fl, robot.bl, .75f, 5200, true));
         mSeq.add(new AutoLib.LogTimeStep(this, "wait for servo", .5f));
         mSeq.add(new AutoLib.ServoStep(robot.markerServo, 1));
         mSeq.add(new AutoLib.LogTimeStep(this, "wait for servo", .5f));
         mSeq.add(new AutoLib.ServoStep(robot.markerServo, -1));
         mSeq.add(new AutoLib.LogTimeStep(this, "wait for servo", .5f));
         //mSeq.add(turnToCraterStep);
+        mSeq.add(new AutoLib.AzimuthTolerancedTurnStep(this, 140f, mGyro, mPid, mMotors, .4f, 5, 3));
         mSeq.add(new AutoLib.MoveByEncoderStep(robot.fr, robot.br, robot.fl, robot.bl, -.75f, -6800, true));
     }
 

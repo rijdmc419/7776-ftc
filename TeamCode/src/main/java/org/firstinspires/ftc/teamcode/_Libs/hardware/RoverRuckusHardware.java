@@ -1,5 +1,6 @@
 package org.firstinspires.ftc.teamcode._Libs.hardware;
 
+import com.qualcomm.robotcore.hardware.CRServo;
 import com.qualcomm.robotcore.hardware.DcMotor;
 import com.qualcomm.robotcore.hardware.DcMotorSimple;
 import com.qualcomm.robotcore.hardware.HardwareMap;
@@ -19,9 +20,10 @@ public class RoverRuckusHardware {
     public DcMotor extend = null;
     public DcMotor extend2 = null;
 
+
     public Servo flapServo;
-    public Servo intakeServo;
-    public Servo intakeServo2;
+    public CRServo intakeServo;
+    public CRServo intakeServo2;
 
     HardwareMap hwMap = null;
 
@@ -40,8 +42,8 @@ public class RoverRuckusHardware {
         extend2 = hwMap.get(DcMotor.class, "extend2");
 
         flapServo = hwMap.get(Servo.class, "flapServo");
-        intakeServo = hwMap.get(Servo.class, "intakeServo");
-        intakeServo2 = hwMap.get(Servo.class, "intakeServo2");
+        intakeServo = hwMap.get(CRServo.class, "intakeServo");
+        intakeServo2 = hwMap.get(CRServo.class, "intakeServo2");
 
         fl.setDirection(DcMotor.Direction.REVERSE);
         bl.setDirection(DcMotor.Direction.REVERSE);
@@ -81,7 +83,7 @@ public class RoverRuckusHardware {
         extend2.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
 
         flapServo.setPosition(0);
-        intakeServo.setPosition(0);
-        intakeServo2.setPosition(0);
+        intakeServo.setPower(0);
+        intakeServo2.setPower(0);
     }
 }

@@ -105,7 +105,7 @@ public class GyroSampling extends AutoLib.Step {
                                 mGoldPosition = 0;
                                 mTurnStep.setHeading(30);
                                 mReturnStep.setHeading(-45);
-                                mDriveAfterTurn.set(1.0, 1.0, 3000, 3000);
+                                mDriveAfterTurn.set(-.5f, -.5f, -3000, -3000);
                                 mTurnToCraterStep.setHeading(135);
                                 tfod.shutdown();
                                 return true;
@@ -114,7 +114,7 @@ public class GyroSampling extends AutoLib.Step {
                                 mGoldPosition = 1;
                                 mTurnStep.setHeading(0);
                                 mReturnStep.setHeading(0);
-                                mDriveAfterTurn.set(.75f, .75f, 1400, 1400);
+                                mDriveAfterTurn.set(-.5f, -.5f, -1400, -1400);
                                 mTurnToCraterStep.setHeading(135);
                                 mGyroAngle = 0;
                                 tfod.shutdown();
@@ -122,8 +122,8 @@ public class GyroSampling extends AutoLib.Step {
                             }
                             else if (mGoldPositionAngle >= 15) {
                                 mGoldPosition = 2;
-                                mTurnStep.setHeading(-40);
-                                mDriveAfterTurn.set(1.0, 1.0, 3200, 3200);
+                                mTurnStep.setHeading(-30);
+                                mDriveAfterTurn.set(-.5f, -.5f, -3200, -3200);
                                 mReturnStep.setHeading(45);
                                 mGyroAngle = -45;
                                 tfod.shutdown();

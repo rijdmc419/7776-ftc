@@ -59,20 +59,17 @@ public class GyroDepotTest extends OpMode{
         driveAfterTurn = new AutoLib.TurnByEncoderStep(robot.fr, robot.br, robot.fl, robot.bl, 1.0f, 1.0f, 0, 0, true);
 
         mSeq.add(new GyroSampling(this, turnStep, robot, returnStep, turnToCraterStep, driveAfterTurn, gyroAngle));
-       // mSeq.add(new AutoLib.MoveByEncoderStep(robot.lift, robot.lift2, .75f, 600, true));
-        mSeq.add(new AutoLib.AzimuthCountedDriveStep(this, 0, mGyro, mPid, mMotors, .75f, 1000, false));
+        mSeq.add(new AutoLib.MoveByEncoderStep(robot.joint, robot.joint2, -.75f, -1450, true));
+        mSeq.add(new AutoLib.MoveByTimeStep(robot.extend, robot.extend2, -.75f, 3, true));
+        mSeq.add(new AutoLib.GyroInit(mGyro));
+        //mSeq.add(new AutoLib.AzimuthCountedDriveStep(this, 0, mGyro, mPid, mMotors, .75f, 1000, false));
         mSeq.add(turnStep);
-        mSeq.add(new AutoLib.MoveByEncoderStep(robot.fr, robot.br, robot.fl, robot.bl, .75f, 3600, true));
+        mSeq.add(new AutoLib.MoveByEncoderStep(robot.fr, robot.br, robot.fl, robot.bl, -.3f, -3600, true));
         mSeq.add(returnStep);
         mSeq.add(driveAfterTurn);
         mSeq.add(new AutoLib.AzimuthTolerancedTurnStep(this, -45f, mGyro, mPid, mMotors, .4f, 5, 3));
-        mSeq.add(new AutoLib.LogTimeStep(this, "wait for servo", .5f));
-     //   mSeq.add(new AutoLib.ServoStep(robot.markerServo, 1));
-        mSeq.add(new AutoLib.LogTimeStep(this, "wait for servo", .5f));
-     //   mSeq.add(new AutoLib.ServoStep(robot.markerServo, -1));
-        mSeq.add(new AutoLib.LogTimeStep(this, "wait for servo", .5f));
         //mSeq.add(turnToCraterStep);
-        mSeq.add(new AutoLib.MoveByEncoderStep(robot.fr, robot.br, robot.fl, robot.bl, -.75f, -6800, true));
+        mSeq.add(new AutoLib.MoveByEncoderStep(robot.fr, robot.br, robot.fl, robot.bl, .3f, 6800, true));
     }
 
     @Override

@@ -459,6 +459,13 @@ public class AutoLib {
 
     }
 
+    static public class gyroReset extends Step {
+
+        public gyroReset(BNO055IMUHeadingSensor mGyro) {
+            mGyro.init(4);
+        }
+    }
+
 
     // some utility functions
 
@@ -1041,6 +1048,30 @@ public class AutoLib {
 
     }
 
+    static public class GyroInit extends Step {
+        BNO055IMUHeadingSensor mGyro;
+        AutoLib.Timer mTimer = new AutoLib.Timer(1);
+
+        public GyroInit(BNO055IMUHeadingSensor gyro) {
+            mGyro = gyro;
+        }
+
+        @Override
+        public boolean loop() {
+            super.loop();
+
+            if (firstLoopCall()) {
+                mGyro.init(4);
+                mTimer.start();
+            }
+
+            if(mTimer.done()) {
+                return true;
+            }
+            return false;
+        }
+    }
+
 
     // some Steps that combine various motor driving Steps with guide Steps that control them
 
@@ -1351,6 +1382,14 @@ public class AutoLib {
                 this.add(new TimedMotorStep(bl, power, seconds, stop));
         }
 
+        public MoveByTimeStep(DcMotor fr, DcMotor fl, double power, double seconds, boolean stop)
+        {
+            if (fr != null)
+                this.add(new TimedMotorStep(fr, power, seconds, stop));
+            if (fl != null)
+                this.add(new TimedMotorStep(fl, power, seconds, stop));
+        }
+
         public MoveByTimeStep(DcMotor motors[], double power, double seconds, boolean stop)
         {
             for (DcMotor em : motors)
@@ -1407,6 +1446,52 @@ public class AutoLib {
             for (DcMotor em : motors)
                 if (em != null)
                     this.add(new EncoderMotorStep(em, power, count, stop));
+        }
+
+    }
+
+    static public class MoveByEncoderStepTimed extends ConcurrentSequence {
+
+        AutoLib.Timer mTimer = new AutoLib.Timer(1.5f);
+
+        public MoveByEncoderStepTimed(DcMotor fr, DcMotor br, DcMotor fl, DcMotor bl, double power, int count, boolean stop)
+        {
+            if (fr != null)
+                this.add(new EncoderMotorStep(fr, power, count, stop));
+            if (br != null)
+                this.add(new EncoderMotorStep(br, power, count, stop));
+            if (fl != null)
+                this.add(new EncoderMotorStep(fl, power, count, stop));
+            if (bl != null)
+                this.add(new EncoderMotorStep(bl, power, count, stop));
+        }
+
+        public MoveByEncoderStepTimed(DcMotor fr, DcMotor br, double power, int count, boolean stop)
+        {
+            if (fr != null)
+                this.add(new EncoderMotorStep(fr, power, count, stop));
+            if (br != null)
+                this.add(new EncoderMotorStep(br, power, count, stop));
+        }
+
+        public MoveByEncoderStepTimed(DcMotor motors[], double power, int count, boolean stop)
+        {
+            for (DcMotor em : motors)
+                if (em != null)
+                    this.add(new EncoderMotorStep(em, power, count, stop));
+        }
+
+        public boolean loop() {
+            super.loop();
+
+            if (firstLoopCall()) {
+                mTimer.start();
+            }
+
+            if(mTimer.done()) {
+                return true;
+            }
+            return false;
         }
 
     }
@@ -1866,7 +1951,6 @@ public class AutoLib {
             return (remaining() <= 0);
         }
     }
-
 
     // test hardware classes -- useful for testing when no hardware is available.
     // these are primarily intended for use in testing autonomous mode code, but could

@@ -18,13 +18,12 @@ import java.text.DecimalFormat;
 
 public class RoverRuckusTeleOp extends OpMode{
     RoverRuckusHardware robot =  new RoverRuckusHardware();
-    double left, right;
+    double left, right, leftTwo, rightTwo;
     double speedFactor;
     double jointSpeed;
-    double jointSpeedFactor = 0.5;
+    double jointSpeedFactor = 0.35;
     double extendSpeed;
     double extendSpeedFactor = 0.1;
-    double intakeSpeed;
 
     @Override
     public void init() {
@@ -39,31 +38,36 @@ public class RoverRuckusTeleOp extends OpMode{
     public void loop() {
         driveTrainSpeed();
 
-        left = -Math.pow(gamepad1.left_stick_y, 3) * speedFactor;
-        right = -Math.pow(gamepad1.right_stick_y, 3) * speedFactor;
+        left = Math.pow(gamepad1.left_stick_y, 3) * speedFactor;
+        right = Math.pow(gamepad1.right_stick_y, 3) * speedFactor;
 
-        jointSpeed = -Math.pow(gamepad2.left_stick_y, 3) * jointSpeedFactor;
-        intakeSpeed = ((-Math.pow(gamepad2.right_stick_y, 3)) + 1) / 2;
+        jointSpeed = 1;
+        //intakeSpeed = (-Math.pow(gamepad2.right_stick_y, 3) / 2) + .5f;
 
-        flap();
+        if(gamepad1.a) {
+            robot.flapServo.setPosition(1);
+        }
+
+        else {
+            robot.flapServo.setPosition(.5f);
+        }
+
         extend();
         powSet();
         telemetry();
     }
 
-    void flap(){
-
-    }
-
     void extend(){
-        if(gamepad2.left_trigger > 0){
-            extendSpeed = gamepad2.left_trigger * extendSpeedFactor * -1;
+        leftTwo = -Math.pow(gamepad2.left_stick_y, 3);
+        rightTwo = -Math.pow(gamepad2.right_stick_y, 3);
+
+        if(gamepad2.left_stick_y > 0) {
+            leftTwo = -1;
+            rightTwo = -1;
         }
-        else if(gamepad2.right_trigger > 0){
-            extendSpeed = gamepad2.right_trigger * extendSpeedFactor;
-        }
-        else{
-            extendSpeed = 0;
+        else if(gamepad2.left_stick_y < 0) {
+            leftTwo = 1;
+            rightTwo = 1;
         }
     }
 
@@ -73,6 +77,8 @@ public class RoverRuckusTeleOp extends OpMode{
         //telemetry.addData("Gamepad 1", gamepad1);
         //telemetry.addData("Gamepad 2", gamepad2);
 
+        telemetry.addData("Encoder", printFormat.format((robot.extend.getCurrentPosition())));
+        telemetry.addData("Encoder", printFormat.format((robot.extend2.getCurrentPosition())));
         telemetry.addData("Extend", printFormat.format(extendSpeed));
         telemetry.addData("Joint", printFormat.format(jointSpeed));
         telemetry.addData("Speed Factor", printFormat.format(speedFactor));
@@ -81,25 +87,46 @@ public class RoverRuckusTeleOp extends OpMode{
     }
 
     void powSet() {
-        robot.fl.setPower(left);
-        robot.bl.setPower(left);
-        robot.fr.setPower(right);
-        robot.br.setPower(right);
-        robot.joint.setPower(jointSpeed);
-        robot.joint2.setPower(jointSpeed);
-        robot.extend.setPower(extendSpeed);
-        robot.extend2.setPower(extendSpeed);
+        robot.fl.setPower(-left);
+        robot.bl.setPower(-left);
+        robot.fr.setPower(-right);
+        robot.br.setPower(-right);
+        robot.extend2.setPower(leftTwo);
+        robot.extend.setPower(rightTwo);
 
-        robot.intakeServo.setPosition(intakeSpeed);
-        robot.intakeServo2.setPosition(intakeSpeed * -1);
+        if(gamepad2.a) {
+            robot.intakeServo.setPower(1);
+            robot.intakeServo2.setPower(-1);
+        }
+        else if (gamepad2.b) {
+            robot.intakeServo.setPower(-1);
+            robot.intakeServo2.setPower(1);
+        }
+        else {
+            robot.intakeServo.setPower(0);
+            robot.intakeServo2.setPower(0);
+        }
+
+        if(gamepad2.dpad_up) {
+            robot.joint.setPower(-.75f);
+            robot.joint2.setPower(-.75f);
+        }
+        else if (gamepad2.dpad_down) {
+            robot.joint.setPower(.75f);
+            robot.joint2.setPower(.75f);
+        }
+        else {
+            robot.joint.setPower(0);
+            robot.joint2.setPower(0);
+        }
     }
 
     void driveTrainSpeed(){
         if(gamepad1.left_bumper && !gamepad1.right_bumper) //Drivetrain Speed Controls
-         speedFactor = 1; //Fast (left bumper)
+         speedFactor = .5; //Fast (left bumper)
        else if(gamepad1.right_bumper && !gamepad1.left_bumper)
           speedFactor = 0.125; //Slow (right bumper)
         else if(!gamepad1.right_bumper && !gamepad1.left_bumper)
-          speedFactor = 0.75; //Default (middle speed)
+          speedFactor = 0.25; //Default (middle speed)
     }
 }

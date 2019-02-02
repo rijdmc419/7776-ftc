@@ -51,19 +51,20 @@ public class GyroSampling extends AutoLib.Step {
     AutoLib.AzimuthTolerancedTurnStep mReturnStep;
     AutoLib.AzimuthTolerancedTurnStep mTurnToCraterStep;
     AutoLib.TurnByEncoderStep mDriveAfterTurn;
+    AutoLib.TurnByEncoderStep mDriveBacktoOrigin;
     RoverRuckusHardware mRobot;
     float mGoldPositionAngle;
     int mGoldPosition;
     int mGyroAngle;
 
     public GyroSampling(OpMode opMode, AutoLib.AzimuthTolerancedTurnStep turnStep, RoverRuckusHardware robot, AutoLib.AzimuthTolerancedTurnStep returnStep,
-                        AutoLib.AzimuthTolerancedTurnStep turnToCraterStep, AutoLib.TurnByEncoderStep driveAfterTurn, int gyroAngle) {
+                        AutoLib.AzimuthTolerancedTurnStep turnToCraterStep, AutoLib.TurnByEncoderStep driveAfterTurn, AutoLib.TurnByEncoderStep driveBacktoOrigin, int gyroAngle) {
         mOpMode = opMode;
         mTurnStep = turnStep;
         mReturnStep = returnStep;
-        mDriveAfterTurn = driveAfterTurn;
         mTurnToCraterStep = turnToCraterStep;
         mDriveAfterTurn = driveAfterTurn;
+        mDriveBacktoOrigin = driveBacktoOrigin;
         mRobot = robot;
         mGyroAngle = gyroAngle;
         mTimer = new AutoLib.Timer(3);
@@ -101,29 +102,32 @@ public class GyroSampling extends AutoLib.Step {
                             goldMineral = recognition;
                             mGoldPositionAngle = (float) (goldMineral.estimateAngleToObject(AngleUnit.DEGREES));
                             mOpMode.telemetry.addData("Gold Position Angle", mGoldPositionAngle);
-                            if(mGoldPositionAngle <= -15) {
+                            if(mGoldPositionAngle <= -15) {//left
                                 mGoldPosition = 0;
                                 mTurnStep.setHeading(30);
                                 mReturnStep.setHeading(-45);
                                 mDriveAfterTurn.set(-.5f, -.5f, -3000, -3000);
+                                mDriveBacktoOrigin.set(-.5f, -.5f, 3000, 3000);
                                 mTurnToCraterStep.setHeading(135);
                                 tfod.shutdown();
                                 return true;
                             }
-                            else if (mGoldPositionAngle < 15) {
+                            else if (mGoldPositionAngle < 15) {//center
                                 mGoldPosition = 1;
                                 mTurnStep.setHeading(0);
                                 mReturnStep.setHeading(0);
                                 mDriveAfterTurn.set(-.5f, -.5f, -1400, -1400);
+                                mDriveBacktoOrigin.set(-.5f, -.5f, 1400, 1400); //opposite of driveAfterTurn
                                 mTurnToCraterStep.setHeading(135);
                                 mGyroAngle = 0;
                                 tfod.shutdown();
                                 return true;
                             }
-                            else if (mGoldPositionAngle >= 15) {
+                            else if (mGoldPositionAngle >= 15) {//right
                                 mGoldPosition = 2;
                                 mTurnStep.setHeading(-30);
                                 mDriveAfterTurn.set(-.5f, -.5f, -3200, -3200);
+                                mDriveBacktoOrigin.set(-.5f, -.5f, 3200, 3200);
                                 mReturnStep.setHeading(45);
                                 mGyroAngle = -45;
                                 tfod.shutdown();

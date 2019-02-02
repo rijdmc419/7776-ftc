@@ -79,7 +79,7 @@ public class GyroCrater extends OpMode{
         mSeq.add(turnStep);//turn to mineral should use (AzimuthCountedDrivestep)
         mSeq.add(driveAfterTurn);// go to mineral
         mSeq.add(driveBacktoOrigin);
-        mSeq.add()
+        //mSeq.add()
         //need to turn to wall with the back of the bot headed to depot
 
 

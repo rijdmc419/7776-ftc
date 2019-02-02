@@ -49,7 +49,7 @@ public class RoverRuckusTeleOp extends OpMode{
         }
 
         else {
-            robot.flapServo.setPosition(.5f);
+            robot.flapServo.setPosition(0f);
         }
 
         extend();

@@ -33,7 +33,7 @@ public class TestMotorEncoders extends OpMode {
 
         // get the motors: depending on the factory we created above, these may be
         // either dummy motors that just log data or real ones that drive the hardware
-        mMotor = mf.getDcMotor("motor1");
+        mMotor = mf.getDcMotor("fr");
 
         // create the root Sequence for this autonomous OpMode
         mSequence = new AutoLib.LinearSequence();

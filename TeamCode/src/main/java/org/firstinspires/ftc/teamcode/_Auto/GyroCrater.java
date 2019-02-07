@@ -25,7 +25,7 @@ public class GyroCrater extends OpMode{
     private AutoLib.TurnByEncoderStep driveBacktoOrigin;
     private int gyroAngle = 0;
 
-    DcMotor mMotors[]; //45 encoder steps == 1 in (for drivetrain)
+    DcMotor mMotors[]; //45 encoder steps == 1in (for drivetrain)
     boolean bDone;                          // motors, some of which can be null: assumed order is fr, br, fl, bl
     BNO055IMUHeadingSensor mGyro;           // gyro to use for heading information
     boolean bSetup;                         // true when we're in "setup mode" where joysticks tweak parameters

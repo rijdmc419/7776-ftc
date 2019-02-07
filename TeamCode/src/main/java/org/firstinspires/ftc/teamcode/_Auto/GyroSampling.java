@@ -106,8 +106,8 @@ public class GyroSampling extends AutoLib.Step {
                                 mGoldPosition = 0;
                                 mTurnStep.setHeading(30);
                                 mReturnStep.setHeading(-45);
-                                mDriveAfterTurn.set(-.5f, -.5f, -3000, -3000);
-                                mDriveBacktoOrigin.set(-.5f, -.5f, 3000, 3000);
+                                mDriveAfterTurn.set(-.25f, -.25f, -1575, -1575);
+                                mDriveBacktoOrigin.set(-.25f, -.25f, 1575, 1575);
                                 mTurnToCraterStep.setHeading(135);
                                 tfod.shutdown();
                                 return true;
@@ -116,8 +116,8 @@ public class GyroSampling extends AutoLib.Step {
                                 mGoldPosition = 1;
                                 mTurnStep.setHeading(0);
                                 mReturnStep.setHeading(0);
-                                mDriveAfterTurn.set(-.5f, -.5f, -1400, -1400);
-                                mDriveBacktoOrigin.set(-.5f, -.5f, 1400, 1400); //opposite of driveAfterTurn
+                                mDriveAfterTurn.set(-.25f, -.25f, -1215, -1215);
+                                mDriveBacktoOrigin.set(-.25f, -.25f, 1215, 1215); //opposite of driveAfterTurn
                                 mTurnToCraterStep.setHeading(135);
                                 mGyroAngle = 0;
                                 tfod.shutdown();
@@ -126,8 +126,8 @@ public class GyroSampling extends AutoLib.Step {
                             else if (mGoldPositionAngle >= 15) {//right
                                 mGoldPosition = 2;
                                 mTurnStep.setHeading(-30);
-                                mDriveAfterTurn.set(-.5f, -.5f, -3200, -3200);
-                                mDriveBacktoOrigin.set(-.5f, -.5f, 3200, 3200);
+                                mDriveAfterTurn.set(-.25f, -.25f, -1575, -1575);
+                                mDriveBacktoOrigin.set(-.25f, -.25f, 1575, 1575);
                                 mReturnStep.setHeading(45);
                                 mGyroAngle = -45;
                                 tfod.shutdown();

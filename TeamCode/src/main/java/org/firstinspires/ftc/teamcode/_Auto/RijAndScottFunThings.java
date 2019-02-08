@@ -74,7 +74,7 @@ public class RijAndScottFunThings extends OpMode{
         mSeq.add(new GyroSampling(this, turnStep, robot, returnStep, turnToCraterStep, driveAfterTurn, driveBacktoOrigin, gyroAngle)); //detects where the gold mineral is
         mSeq.add(new AutoLib.MoveByEncoderStepTimed(robot.joint, robot.joint2, -.75f, -1450, true)); //rotates to ground
         mSeq.add(new AutoLib.MoveByTimeStep(robot.extend, robot.extend2, -.75f, 3, true)); //delatches (change to encoder step when we have new motor)
-        mSeq.add(new AutoLib.GyroInit(mGyro)); //activates gyro
+       // mSeq.add(new AutoLib.GyroInit(mGyro)); //activates gyro
         //mSeq.add(new AutoLib.AzimuthCountedDriveStep(this, 0, mGyro, mPid, mMotors, -.4f, -1000, false));
         mSeq.add(turnStep);//turn to mineral should use (AzimuthCountedDrivestep) z
         mSeq.add(driveAfterTurn);// go to mineral

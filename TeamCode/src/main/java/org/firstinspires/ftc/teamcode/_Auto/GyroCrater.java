@@ -64,21 +64,26 @@ public class GyroCrater extends OpMode{
         turnToCraterStep = new AutoLib.AzimuthTolerancedTurnStep(this, 0f, mGyro, mPid, mMotors, .5f, 5, 3);
         driveAfterTurn = new AutoLib.TurnByEncoderStep(robot.fr, robot.br, robot.fl, robot.bl, 1.0f, 1.0f, 0, 0, true);
 
-        mSeq.add(new GyroSampling(this, turnStep, robot, returnStep, turnToCraterStep, driveAfterTurn, gyroAngle));
-        mSeq.add(new AutoLib.MoveByEncoderStepTimed(robot.joint, robot.joint2, -.75f, -1450, true));
-        mSeq.add(new AutoLib.MoveByTimeStep(robot.extend, robot.extend2, -.75f, 3, true));
-        mSeq.add(new AutoLib.GyroInit(mGyro));
+        mSeq.add(new GyroSampling(this, turnStep, robot, returnStep, turnToCraterStep, driveAfterTurn, gyroAngle));  //locate gold and determine values for movement
+        mSeq.add(new AutoLib.MoveByEncoderStepTimed(robot.joint, robot.joint2, -.6f, -1900, true)); // unfold robot
+        //mSeq.add(new AutoLib.MoveByTimeStep(robot.extend, robot.extend2, -.75f, 2.75f, true));
+        mSeq.add(new AutoLib.MoveByEncoderStepTimed(robot.extend, robot.extend2, -.75f, -1000, true)); // extend robot
+        mSeq.add(new AutoLib.GyroInit(mGyro)); // initialize gyro when on ground
+        //mSeq.add(new AutoLib.MoveByTimeStep(robot.extend, robot.extend2, .75f, 2.5f, true));
+
         //mSeq.add(new AutoLib.AzimuthCountedDriveStep(this, 0, mGyro, mPid, mMotors, -.4f, -1000, false));
-        mSeq.add(turnStep);
-        mSeq.add(new AutoLib.MoveByEncoderStep(robot.fr, robot.br, robot.fl, robot.bl, -.3f, -1200, true));
-        /*mSeq.add(new AutoLib.MoveByEncoderStep(robot.fr, robot.br, robot.fl, robot.bl, .3f, 1000, true));
-        mSeq.add(new AutoLib.AzimuthTolerancedTurnStep(this, -110f, mGyro, mPid, mMotors, .3f, 5, 3));
-        mSeq.add(new AutoLib.MoveByEncoderStep(robot.fr, robot.br, robot.fl, robot.bl, .3f, 2300, true));
-        mSeq.add(new AutoLib.AzimuthTolerancedTurnStep(this, 130f, mGyro, mPid, mMotors, .4f, 5, 3));
-        mSeq.add(new AutoLib.MoveByEncoderStep(robot.fr, robot.br, robot.fl, robot.bl, -.3f, -4200, true));
+        mSeq.add(turnStep); // turn to mineral
+        mSeq.add(new AutoLib.MoveByEncoderStep(robot.fr, robot.br, robot.fl, robot.bl, -.3f, -1200, false)); //move to mineral
+        mSeq.add(new AutoLib.MoveByEncoderStep(robot.fr, robot.br, robot.fl, robot.bl, .3f, 900, false)); // move back to origin
+        mSeq.add(new AutoLib.AzimuthTolerancedTurnStep(this, -100f, mGyro, mPid, mMotors, .3f, 5, 3)); // turn to mineral-lander space
+        mSeq.add(new AutoLib.MoveByEncoderStep(robot.fr, robot.br, robot.fl, robot.bl, .3f, 1900, false)); //go to depot-crater corridor
+        mSeq.add(new AutoLib.AzimuthTolerancedTurnStep(this, 133f, mGyro, mPid, mMotors, .3f, 5, 3)); // turn to depot
+        mSeq.add(new AutoLib.MoveByEncoderStep(robot.fr, robot.br, robot.fl, robot.bl, -.3f, -1800, false)); // drive to depot
+        mSeq.add(new AutoLib.ServoStep(robot.flapServo, 1)); // open flap for marker
+        mSeq.add(new AutoLib.LogTimeStep(this, "servo", 2f)); //
+        mSeq.add(new AutoLib.ServoStep(robot.flapServo, 0)); // close flap for marker
         //mSeq.add(turnToCraterStep);
-        mSeq.add(new AutoLib.AzimuthTolerancedTurnStep(this, 140f, mGyro, mPid, mMotors, -.3f, 5, 3));
-        mSeq.add(new AutoLib.MoveByEncoderStep(robot.fr, robot.br, robot.fl, robot.bl, .1f, 6000, true));*/
+        mSeq.add(new AutoLib.MoveByEncoderStep(robot.fr, robot.br, robot.fl, robot.bl, .3f, 3000, true)); // drive and park on crater
     }
 
     @Override

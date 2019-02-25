@@ -123,7 +123,7 @@ public class GyroSampling extends AutoLib.Step {
                             else if (mGoldPositionAngle >= 15) {
                                 mGoldPosition = 2;
                                 mTurnStep.setHeading(-30);
-                                mDriveAfterTurn.set(-.5f, -.5f, -3200, -3200);
+                                mDriveAfterTurn.set(-.5f, -.5f, -3000, -3000);
                                 mReturnStep.setHeading(45);
                                 mGyroAngle = -45;
                                 tfod.shutdown();

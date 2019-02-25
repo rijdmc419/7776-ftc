@@ -119,21 +119,21 @@ public class TensorFlowStep extends AutoLib.Step {
         if(mTimer.done()) {
             mOpMode.telemetry.addData("Gold Position Number", mGoldPosition);
             if(mGoldPosition == 0) {
-                mTurnStep.set(1.0, -1.0, 450, -450);
-                mReturnStep.set(-1.0, 1.0, -850, 850);
-                mDriveAfterTurn.set(1.0, 1.0, 3000, 3000);
+               // mTurnStep.set(1.0, -1.0, 450, -450);
+               // mReturnStep.set(-1.0, 1.0, -850, 850);
+                mDriveAfterTurn.set(1.0, 1.0, 1575, 1575);
                 mTurnToCraterStep.set(1.0f, -1.0f, 2000, -2000);
             }
             if(mGoldPosition == 1) {
-                mTurnStep.set(0.0, 0.0, 0, 0);
-                mReturnStep.set(0.0, 0.0, 0, 0);
-                mDriveAfterTurn.set(1.0, 1.0, 2100, 2100);
+                //mTurnStep.set(0.0, 0.0, 0, 0);
+                //mReturnStep.set(0.0, 0.0, 0, 0);
+                mDriveAfterTurn.set(1.0, 1.0, 1125, 1125);
                 mTurnToCraterStep.set(1.0f, -1.0f, 1600, -1600);
             }
             if(mGoldPosition == 2) {
-                mTurnStep.set(-1.0, 1.0, -500, 500);
-                mDriveAfterTurn.set(1.0, 1.0, 3100, 3100);
-                mReturnStep.set(1.0, -1.0, 850, -850);
+                //mTurnStep.set(-1.0, 1.0, -500, 500);
+                mDriveAfterTurn.set(1.0, 1.0, 1575, 1575);
+                //mReturnStep.set(1.0, -1.0, 850, -850);
                 mTurnToCraterStep.set(1.0f, -1.0f, 1300, -1300);
             }
 

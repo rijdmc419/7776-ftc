@@ -45,6 +45,13 @@ public class RoverRuckusTeleOp extends OpMode{
         //intakeSpeed = (-Math.pow(gamepad2.right_stick_y, 3) / 2) + .5f;
 
         if(gamepad1.a) {
+<<<<<<< HEAD
+=======
+            robot.flapServo.setPosition(1);
+        }
+
+        else {
+>>>>>>> ffcd2dd8de26036b8e5c34886bf1c66d6cfa722f
             robot.flapServo.setPosition(0f);
         }
 

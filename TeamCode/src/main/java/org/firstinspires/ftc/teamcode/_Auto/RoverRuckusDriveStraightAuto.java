@@ -10,12 +10,16 @@ import org.firstinspires.ftc.teamcode._Libs.hardware.RoverRuckusHardware;
 @Autonomous(name = "Drive Straight Auto")
 public class RoverRuckusDriveStraightAuto extends OpMode{
     RoverRuckusHardware robot =  new RoverRuckusHardware();
-    private AutoLib.Sequence mSeq = new AutoLib.LinearSequence();
+    private AutoLib.Sequence mSeq;
+    private boolean bDone;
 
     public void init() {
+         bDone = false;
+         mSeq = new AutoLib.LinearSequence();
+
         robot.init(hardwareMap);
-        mSeq.add(new AutoLib.MoveByEncoderStep(robot.fr, robot.br, robot.fl, robot.bl, 1.0f, 4250, true));
-        //mSeq.add(new AutoLib.TurnByEncoderStep(robot.fr, robot.fl, 1.0f, -1.0f, 2000, -2000, true));
+        //mSeq.add(new AutoLib.MoveByEncoderStep(robot.fr, robot.br, robot.fl, robot.bl, 0.5f, 450, true));
+      //  mSeq.add(new AutoLib.AzimuthCountedDriveStep(this,));
     }
 
     @Override
@@ -25,6 +29,11 @@ public class RoverRuckusDriveStraightAuto extends OpMode{
 
     @Override
     public void loop() {
+        // until we're done, keep looping through the current Step(s)
+        if (!bDone)
+            bDone = mSeq.loop();       // returns true when we're done
+        else
+            telemetry.addData("sequence finished", "");
 
     }
 }

@@ -1,4 +1,4 @@
-package org.firstinspires.ftc.teamcode._Test._Drive;
+package org.firstinspires.ftc.teamcode._Auto;
 
 import com.qualcomm.hardware.bosch.BNO055IMU;
 import com.qualcomm.robotcore.eventloop.opmode.Autonomous;
@@ -19,7 +19,7 @@ import org.firstinspires.ftc.teamcode._Libs.SensorLib;
 
 
 // simple example sequence that tests either of gyro-based AzimuthCountedDriveStep or AzimuthTimedDriveStep to drive along a square path
-@Autonomous(name="Test: REV IMU Drive Test", group ="Test")
+@Autonomous(name="GyroDriveTestOp", group ="Test")
 //@Disabled
 public class GyroDriveTestOp extends OpMode {
 
@@ -55,13 +55,10 @@ public class GyroDriveTestOp extends OpMode {
         (mMotors[2] = mf.getDcMotor("fl")).setDirection(DcMotor.Direction.REVERSE);
         (mMotors[3] = mf.getDcMotor("bl")).setDirection(DcMotor.Direction.REVERSE);
 
-        //mMotors[1].setDirection(DcMotorSimple.Direction.REVERSE);   // HACK!!!  Ratbot REV hub right back motor is reversed!
-
-
         // get hardware IMU and wrap gyro in HeadingSensor object usable below
         mGyro = new BNO055IMUHeadingSensor(hardwareMap.get(BNO055IMU.class, "imu"));
-        mGyro.init(4);  // 4: rev hub mounted flat
-
+        mGyro.init(4);  // orientation of REV hub in this robot
+        //mGyro.setDegreesPerTurn(355.0f);     // appears that's what my IMU does ...
 
         // create a PID controller for the sequence
         mPid = new SensorLib.PID(Kp, Ki, Kd, KiCutoff);    // make the object that implements PID control algorithm
@@ -74,36 +71,42 @@ public class GyroDriveTestOp extends OpMode {
         // create the root Sequence for this autonomous OpMode
         mSequence = new AutoLib.LinearSequence();
 
-        boolean bUseEncoders = false;
+        // add a bunch of timed "legs" to the sequence - use Gyro heading convention of positive degrees CW from initial heading
+        float tol = 5.0f;   // tolerance in degrees
+        float timeout = 2.0f;   // seconds
+        // test "scanning" left and right e.g. 30 degrees
+        mSequence.add(new AutoLib.AzimuthTolerancedTurnStep(this, 30, mGyro, mPid, mMotors, turnPower, tol, timeout));
+        mSequence.add(new AutoLib.LogTimeStep(this, "left 30", 2));
+        mSequence.add(new AutoLib.AzimuthTolerancedTurnStep(this, -30, mGyro, mPid, mMotors, turnPower, tol, timeout));
+        mSequence.add(new AutoLib.LogTimeStep(this, "right 30", 2));
+
+        // turn 4 quadrants in place
+        mSequence.add(new AutoLib.AzimuthTolerancedTurnStep(this, 0, mGyro, mPid, mMotors, turnPower, tol, timeout));
+        mSequence.add(new AutoLib.LogTimeStep(this, "course 0", 1));
+        mSequence.add(new AutoLib.AzimuthTolerancedTurnStep(this, 90, mGyro, mPid, mMotors, turnPower, tol, timeout));
+        mSequence.add(new AutoLib.LogTimeStep(this, "course 90", 1));
+        mSequence.add(new AutoLib.AzimuthTolerancedTurnStep(this, 180, mGyro, mPid, mMotors, turnPower, tol, timeout));
+        mSequence.add(new AutoLib.LogTimeStep(this, "course 180", 1));
+        mSequence.add(new AutoLib.AzimuthTolerancedTurnStep(this, 270, mGyro, mPid, mMotors, turnPower, tol, timeout));
+        mSequence.add(new AutoLib.LogTimeStep(this, "course 270", 1));
+        mSequence.add(new AutoLib.AzimuthTolerancedTurnStep(this, 0, mGyro, mPid, mMotors, turnPower, tol, timeout));
+        mSequence.add(new AutoLib.LogTimeStep(this, "course 0", 1));
+
+        boolean bUseEncoders = true;
         if (bUseEncoders) {
             // add a bunch of encoder-counted "legs" to the sequence - use Gyro heading convention of positive degrees CCW from initial heading
             int leg = 4000;  // motor-encoder count along each leg of the polygon
             mSequence.add(new AutoLib.AzimuthCountedDriveStep(this, 0, mGyro, mPid, mMotors, movePower, leg, false));
             mSequence.add(new AutoLib.AzimuthCountedDriveStep(this, 90, mGyro, mPid, mMotors, movePower, leg, false));
             mSequence.add(new AutoLib.AzimuthCountedDriveStep(this, 180, mGyro, mPid, mMotors, movePower, leg, false));
-            mSequence.add(new AutoLib.AzimuthCountedDriveStep(this, 270, mGyro, mPid, mMotors, movePower, leg, false));
-            mSequence.add(new AutoLib.AzimuthCountedDriveStep(this, 0, mGyro, mPid, mMotors, movePower, leg, true));
-                    }
-        else  {
-            // add a bunch of timed "legs" to the sequence - use Gyro heading convention of positive degrees CW from initial heading
-            float tol = 5.0f;   // tolerance in degrees
-            float timeout = 2.0f;   // seconds
-            // test "scanning" left and right e.g. 30 degrees
-            mSequence.add(new AutoLib.AzimuthTolerancedTurnStep(this, 30, mGyro, mPid, mMotors, turnPower, tol, timeout));
-            mSequence.add(new AutoLib.LogTimeStep(this, "left 30", 2));
-            mSequence.add(new AutoLib.AzimuthTolerancedTurnStep(this, -30, mGyro, mPid, mMotors, turnPower, tol, timeout));
-            mSequence.add(new AutoLib.LogTimeStep(this, "right 30", 2));
-
-            // turn 4 quadrants in place
-            mSequence.add(new AutoLib.AzimuthTolerancedTurnStep(this, 90, mGyro, mPid, mMotors, turnPower, tol, timeout));
-            mSequence.add(new AutoLib.LogTimeStep(this, "course 90", 1));
-            mSequence.add(new AutoLib.AzimuthTolerancedTurnStep(this, 180, mGyro, mPid, mMotors, turnPower, tol, timeout));
-            mSequence.add(new AutoLib.LogTimeStep(this, "course 180", 1));
-            mSequence.add(new AutoLib.AzimuthTolerancedTurnStep(this, 270, mGyro, mPid, mMotors, turnPower, tol, timeout));
-            mSequence.add(new AutoLib.LogTimeStep(this, "course 270", 1));
+            mSequence.add(new AutoLib.AzimuthCountedDriveStep(this, -90, mGyro, mPid, mMotors, movePower, leg, false));
             mSequence.add(new AutoLib.AzimuthTolerancedTurnStep(this, 0, mGyro, mPid, mMotors, turnPower, tol, timeout));
-            mSequence.add(new AutoLib.LogTimeStep(this, "course 0", 1));
-
+            mSequence.add(new AutoLib.AzimuthCountedDriveStep(this, 90, mGyro, mPid, mMotors, movePower, leg, true));
+            mSequence.add(new AutoLib.AzimuthCountedDriveStep(this, 0, mGyro, mPid, mMotors, movePower, leg, true));
+            mSequence.add(new AutoLib.AzimuthCountedDriveStep(this, -90, mGyro, mPid, mMotors, movePower, leg, true));
+            mSequence.add(new AutoLib.AzimuthCountedDriveStep(this, 180, mGyro, mPid, mMotors, movePower, leg, true));
+        }
+        else  {
             // drive a "box" CCW and then again CW - see if we end up where we started ...
             float leg = debug ? 6.0f : 1.5f;  // time along each leg of the polygon
             mSequence.add(new AutoLib.AzimuthTimedDriveStep(this, 0, mGyro, mPid, mMotors, movePower, leg, false));
@@ -115,9 +118,9 @@ public class GyroDriveTestOp extends OpMode {
             mSequence.add(new AutoLib.AzimuthTimedDriveStep(this, 0, mGyro, mPid, mMotors, movePower, leg, false));
             mSequence.add(new AutoLib.AzimuthTimedDriveStep(this, -90, mGyro, mPid, mMotors, movePower, leg, false));
             mSequence.add(new AutoLib.AzimuthTimedDriveStep(this, 180, mGyro, mPid, mMotors, movePower, leg, false));
-            mSequence.add(new AutoLib.AzimuthTolerancedTurnStep(this, 0, mGyro, mPid, mMotors, turnPower, tol, timeout));
-            mSequence.add(new AutoLib.MoveByTimeStep(mMotors, 0, 0, true));     // stop all motors
         }
+        mSequence.add(new AutoLib.AzimuthTolerancedTurnStep(this, 0, mGyro, mPid, mMotors, turnPower, tol, timeout));
+        mSequence.add(new AutoLib.MoveByTimeStep(mMotors, 0, 0, true));     // stop all motors
 
         // start out not-done
         bDone = false;

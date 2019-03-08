@@ -13,7 +13,7 @@ import org.firstinspires.ftc.teamcode._Libs.hardware.RoverRuckusHardware;
 
 import java.util.List;
 
-public class TensorFlowStep extends AutoLib.Step {
+public class tensorFlowStepTest extends AutoLib.Step {
     private static final String TFOD_MODEL_ASSET = "RoverRuckus.tflite";
     private static final String LABEL_GOLD_MINERAL = "Gold Mineral";
     private static final String LABEL_SILVER_MINERAL = "Silver Mineral";
@@ -52,14 +52,16 @@ public class TensorFlowStep extends AutoLib.Step {
     AutoLib.TurnByEncoderStep mDriveAfterTurn;
     RoverRuckusHardware mRobot;
     int mGoldPosition;
+    boolean mScanThree;
 
-    public TensorFlowStep(OpMode opMode, AutoLib.TurnByEncoderStep turnStep, RoverRuckusHardware robot, AutoLib.TurnByEncoderStep returnStep, AutoLib.TurnByEncoderStep turnToCraterStep, AutoLib.TurnByEncoderStep driveAfterTurn) {
+    public tensorFlowStepTest(OpMode opMode, AutoLib.TurnByEncoderStep turnStep, RoverRuckusHardware robot, AutoLib.TurnByEncoderStep returnStep, AutoLib.TurnByEncoderStep turnToCraterStep, AutoLib.TurnByEncoderStep driveAfterTurn, boolean scanThree) {
         mOpMode = opMode;
         mTurnStep = turnStep;
         mReturnStep = returnStep;
         mDriveAfterTurn = driveAfterTurn;
         mTurnToCraterStep = turnToCraterStep;
         mDriveAfterTurn = driveAfterTurn;
+        mScanThree = scanThree;
         mRobot = robot;
         mTimer = new AutoLib.Timer(3);
 
@@ -88,6 +90,7 @@ public class TensorFlowStep extends AutoLib.Step {
             if (updatedRecognitions != null) {
                 mOpMode.telemetry.addData("# Object Detected", updatedRecognitions.size());
                 if (updatedRecognitions.size() == 3) {
+                    mScanThree = true;
                     int goldMineralX = -1;
                     int silverMineral1X = -1;
                     int silverMineral2X = -1;
@@ -114,26 +117,30 @@ public class TensorFlowStep extends AutoLib.Step {
                     }
                 }
             }
+
+            else {
+                mScanThree = false;
+            }
         }
 
         if(mTimer.done()) {
             mOpMode.telemetry.addData("Gold Position Number", mGoldPosition);
             if(mGoldPosition == 0) {
-               // mTurnStep.set(1.0, -1.0, 450, -450);
-               // mReturnStep.set(-1.0, 1.0, -850, 850);
-                mDriveAfterTurn.set(1.0, 1.0, 1575, 1575);
+                mTurnStep.set(1.0, -1.0, 450, -450);
+                mReturnStep.set(-1.0, 1.0, -850, 850);
+                mDriveAfterTurn.set(1.0, 1.0, 3000, 3000);
                 mTurnToCraterStep.set(1.0f, -1.0f, 2000, -2000);
             }
             if(mGoldPosition == 1) {
-                //mTurnStep.set(0.0, 0.0, 0, 0);
-                //mReturnStep.set(0.0, 0.0, 0, 0);
-                mDriveAfterTurn.set(1.0, 1.0, 1125, 1125);
+                mTurnStep.set(0.0, 0.0, 0, 0);
+                mReturnStep.set(0.0, 0.0, 0, 0);
+                mDriveAfterTurn.set(1.0, 1.0, 2100, 2100);
                 mTurnToCraterStep.set(1.0f, -1.0f, 1600, -1600);
             }
             if(mGoldPosition == 2) {
-                //mTurnStep.set(-1.0, 1.0, -500, 500);
-                mDriveAfterTurn.set(1.0, 1.0, 1575, 1575);
-                //mReturnStep.set(1.0, -1.0, 850, -850);
+                mTurnStep.set(-1.0, 1.0, -500, 500);
+                mDriveAfterTurn.set(1.0, 1.0, 3100, 3100);
+                mReturnStep.set(1.0, -1.0, 850, -850);
                 mTurnToCraterStep.set(1.0f, -1.0f, 1300, -1300);
             }
 
@@ -146,9 +153,9 @@ public class TensorFlowStep extends AutoLib.Step {
         return false;
     }
 
-        /**
-         * Initialize the Vuforia localization engine.
-         */
+    /**
+     * Initialize the Vuforia localization engine.
+     */
     private void initVuforia() {
         /*
          * Configure Vuforia by creating a Parameter object, and passing it to the Vuforia engine.

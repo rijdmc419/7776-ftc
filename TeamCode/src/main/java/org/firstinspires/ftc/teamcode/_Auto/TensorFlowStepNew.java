@@ -5,6 +5,7 @@ import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
 import com.qualcomm.robotcore.eventloop.opmode.OpMode;
 
 import org.firstinspires.ftc.robotcore.external.ClassFactory;
+import org.firstinspires.ftc.robotcore.external.navigation.AngleUnit;
 import org.firstinspires.ftc.robotcore.external.navigation.VuforiaLocalizer;
 import org.firstinspires.ftc.robotcore.external.tfod.Recognition;
 import org.firstinspires.ftc.robotcore.external.tfod.TFObjectDetector;
@@ -13,7 +14,7 @@ import org.firstinspires.ftc.teamcode._Libs.hardware.RoverRuckusHardware;
 
 import java.util.List;
 
-public class TensorFlowStep extends AutoLib.Step {
+public class TensorFlowStepNew extends AutoLib.Step {
     private static final String TFOD_MODEL_ASSET = "RoverRuckus.tflite";
     private static final String LABEL_GOLD_MINERAL = "Gold Mineral";
     private static final String LABEL_SILVER_MINERAL = "Silver Mineral";
@@ -51,9 +52,10 @@ public class TensorFlowStep extends AutoLib.Step {
     AutoLib.TurnByEncoderStep mTurnToCraterStep;
     AutoLib.TurnByEncoderStep mDriveAfterTurn;
     RoverRuckusHardware mRobot;
+    float mGoldPositionAngle;
     int mGoldPosition;
 
-    public TensorFlowStep(OpMode opMode, AutoLib.TurnByEncoderStep turnStep, RoverRuckusHardware robot, AutoLib.TurnByEncoderStep returnStep, AutoLib.TurnByEncoderStep turnToCraterStep, AutoLib.TurnByEncoderStep driveAfterTurn) {
+    public TensorFlowStepNew(OpMode opMode, AutoLib.TurnByEncoderStep turnStep, RoverRuckusHardware robot, AutoLib.TurnByEncoderStep returnStep, AutoLib.TurnByEncoderStep turnToCraterStep, AutoLib.TurnByEncoderStep driveAfterTurn) {
         mOpMode = opMode;
         mTurnStep = turnStep;
         mReturnStep = returnStep;
@@ -61,7 +63,6 @@ public class TensorFlowStep extends AutoLib.Step {
         mTurnToCraterStep = turnToCraterStep;
         mDriveAfterTurn = driveAfterTurn;
         mRobot = robot;
-        mTimer = new AutoLib.Timer(3);
 
         initVuforia();
 
@@ -81,74 +82,90 @@ public class TensorFlowStep extends AutoLib.Step {
             mTimer.start();
         }
 
+        Recognition goldMineral = null;
         if (tfod != null) {
             // getUpdatedRecognitions() will return null if no new information is available since
             // the last time that call was made.
             List<Recognition> updatedRecognitions = tfod.getUpdatedRecognitions();
             if (updatedRecognitions != null) {
                 mOpMode.telemetry.addData("# Object Detected", updatedRecognitions.size());
-                if (updatedRecognitions.size() == 3) {
-                    int goldMineralX = -1;
-                    int silverMineral1X = -1;
-                    int silverMineral2X = -1;
+                if (updatedRecognitions.size() >= 1) {
                     for (Recognition recognition : updatedRecognitions) {
                         if (recognition.getLabel().equals(LABEL_GOLD_MINERAL)) {
-                            goldMineralX = (int) recognition.getLeft();
-                        } else if (silverMineral1X == -1) {
-                            silverMineral1X = (int) recognition.getLeft();
-                        } else {
-                            silverMineral2X = (int) recognition.getLeft();
-                        }
-                    }
-                    if (goldMineralX != -1 && silverMineral1X != -1 && silverMineral2X != -1) {
-                        if (goldMineralX < silverMineral1X && goldMineralX < silverMineral2X) {
-                            mOpMode.telemetry.addData("Gold Mineral Position", "Left");
-                            mGoldPosition = 0;
-                        } else if (goldMineralX > silverMineral1X && goldMineralX > silverMineral2X) {
-                            mOpMode.telemetry.addData("Gold Mineral Position", "Right");
-                            mGoldPosition = 2;
-                        } else {
-                            mOpMode.telemetry.addData("Gold Mineral Position", "Center");
-                            mGoldPosition = 1;
+                            goldMineral = recognition;
+                            mGoldPositionAngle = (float) (goldMineral.estimateAngleToObject(AngleUnit.DEGREES));
+                            mOpMode.telemetry.addData("Gold Position Angle", mGoldPositionAngle);
+                            if(mGoldPositionAngle <= -15) {
+                                mGoldPosition = 0;
+                                mTurnStep.set(1.0, -1.0, 450, -450);
+                                mReturnStep.set(-1.0, 1.0, -850, 850);
+                                mDriveAfterTurn.set(1.0, 1.0, 3000, 3000);
+                                mTurnToCraterStep.set(1.0f, -1.0f, 2000, -2000);
+                                tfod.shutdown();
+                                return true;
+                            }
+                            else if (mGoldPositionAngle < 15) {
+                                mGoldPosition = 1;
+                                mTurnStep.set(0.0, 0.0, 0, 0);
+                                mReturnStep.set(0.0, 0.0, 0, 0);
+                                mDriveAfterTurn.set(1.0, 1.0, 2100, 2100);
+                                mTurnToCraterStep.set(1.0f, -1.0f, 1600, -1600);
+                                tfod.shutdown();
+                                return true;
+                            }
+                            else if (mGoldPositionAngle >= 15) {
+                                mGoldPosition = 2;
+                                mTurnStep.set(-1.0, 1.0, -500, 500);
+                                mDriveAfterTurn.set(1.0, 1.0, 3200, 3200);
+                                mReturnStep.set(1.0, -1.0, 750, -750);
+                                mTurnToCraterStep.set(1.0f, -1.0f, 1300, -1300);
+                                tfod.shutdown();
+                                return true;
+                            }
+                            mOpMode.telemetry.addData("Gold Position", mGoldPosition);
                         }
                     }
                 }
             }
         }
 
-        if(mTimer.done()) {
-            mOpMode.telemetry.addData("Gold Position Number", mGoldPosition);
-            if(mGoldPosition == 0) {
-               // mTurnStep.set(1.0, -1.0, 450, -450);
-               // mReturnStep.set(-1.0, 1.0, -850, 850);
-                mDriveAfterTurn.set(1.0, 1.0, 1575, 1575);
-                mTurnToCraterStep.set(1.0f, -1.0f, 2000, -2000);
-            }
-            if(mGoldPosition == 1) {
-                //mTurnStep.set(0.0, 0.0, 0, 0);
-                //mReturnStep.set(0.0, 0.0, 0, 0);
-                mDriveAfterTurn.set(1.0, 1.0, 1125, 1125);
-                mTurnToCraterStep.set(1.0f, -1.0f, 1600, -1600);
-            }
-            if(mGoldPosition == 2) {
-                //mTurnStep.set(-1.0, 1.0, -500, 500);
-                mDriveAfterTurn.set(1.0, 1.0, 1575, 1575);
-                //mReturnStep.set(1.0, -1.0, 850, -850);
-                mTurnToCraterStep.set(1.0f, -1.0f, 1300, -1300);
+        /*if(mTimer.done()) {
+            if (goldMineral != null) {
+                mGoldPositionAngle = (float) (goldMineral.estimateAngleToObject(AngleUnit.DEGREES));
+                mOpMode.telemetry.addData("Gold Position Angle", mGoldPositionAngle);
+                mOpMode.telemetry.addData("Gold Position", mGoldPosition);
+                if (mGoldPosition == 0) {
+                    mTurnStep.set(1.0, -1.0, 450, -450);
+                    mReturnStep.set(-1.0, 1.0, -850, 850);
+                    mDriveAfterTurn.set(1.0, 1.0, 3000, 3000);
+                    mTurnToCraterStep.set(1.0f, -1.0f, 2000, -2000);
+                }
+                if (mGoldPosition == 1) {
+                    mTurnStep.set(0.0, 0.0, 0, 0);
+                    mReturnStep.set(0.0, 0.0, 0, 0);
+                    mDriveAfterTurn.set(1.0, 1.0, 2100, 2100);
+                    mTurnToCraterStep.set(1.0f, -1.0f, 1600, -1600);
+                }
+                if (mGoldPosition == 2) {
+                    mTurnStep.set(-1.0, 1.0, -500, 500);
+                    mDriveAfterTurn.set(1.0, 1.0, 3100, 3100);
+                    mReturnStep.set(1.0, -1.0, 850, -850);
+                    mTurnToCraterStep.set(1.0f, -1.0f, 1300, -1300);
+                }
             }
 
             if (tfod != null) {
                 tfod.shutdown();
             }
             return true;
-        }
+        }*/
 
         return false;
     }
 
-        /**
-         * Initialize the Vuforia localization engine.
-         */
+    /**
+     * Initialize the Vuforia localization engine.
+     */
     private void initVuforia() {
         /*
          * Configure Vuforia by creating a Parameter object, and passing it to the Vuforia engine.
